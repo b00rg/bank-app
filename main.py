@@ -1,5 +1,6 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from starlette.middleware.sessions import SessionMiddleware
 import os
 from dotenv import load_dotenv
@@ -9,6 +10,7 @@ from backend.routes.user import router as user_router
 # from backend.routes.speak import router as speak_router       # add when ready
 # from backend.routes.transactions import router as transactions_router
 # from backend.routes.payments import router as payments_router
+from backend.routes import truelayer
 
 load_dotenv()
 
@@ -34,10 +36,15 @@ app.add_middleware(
 # --- Routers ---
 
 app.include_router(user_router)
+app.include_router(truelayer.router)
 # app.include_router(chat_router)
 # app.include_router(speak_router)
 # app.include_router(transactions_router)
 # app.include_router(payments_router)
+
+# --- Static Files ---
+# Serve index.html and other static files
+app.mount("/", StaticFiles(directory=".", html=True), name="static")
 
 
 # --- Health check ---
