@@ -6,6 +6,8 @@ from dotenv import load_dotenv
 
 from routes.user import router as user_router
 from routes.webhooks import router as webhooks_router
+from routes.carer import router as carer_router
+from routes.payments import router as payments_router
 # from routes.chat import router as chat_router         # add when ready
 # from routes.speak import router as speak_router       # add when ready
 # from routes.transactions import router as transactions_router
@@ -36,6 +38,8 @@ app.add_middleware(
 
 app.include_router(user_router)
 app.include_router(webhooks_router)
+app.include_router(carer_router)
+app.include_router(payments_router)
 # app.include_router(chat_router)
 # app.include_router(speak_router)
 # app.include_router(transactions_router)
