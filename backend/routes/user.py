@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
-from backend.services.stripe import create_stripe_customer, get_stripe_customer
+from services.stripe import create_stripe_customer, get_stripe_customer
 router = APIRouter()
 
 

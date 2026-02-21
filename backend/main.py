@@ -4,11 +4,12 @@ from starlette.middleware.sessions import SessionMiddleware
 import os
 from dotenv import load_dotenv
 
-from backend.routes.user import router as user_router
-# from backend.routes.chat import router as chat_router         # add when ready
-# from backend.routes.speak import router as speak_router       # add when ready
-# from backend.routes.transactions import router as transactions_router
-# from backend.routes.payments import router as payments_router
+from routes.user import router as user_router
+from routes.webhooks import router as webhooks_router
+# from routes.chat import router as chat_router         # add when ready
+# from routes.speak import router as speak_router       # add when ready
+# from routes.transactions import router as transactions_router
+# from routes.payments import router as payments_router
 
 load_dotenv()
 
@@ -34,6 +35,7 @@ app.add_middleware(
 # --- Routers ---
 
 app.include_router(user_router)
+app.include_router(webhooks_router)
 # app.include_router(chat_router)
 # app.include_router(speak_router)
 # app.include_router(transactions_router)
