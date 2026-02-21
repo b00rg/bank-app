@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request
 from pydantic import BaseModel
 from services.stripe import create_stripe_customer, get_stripe_customer
+from pydantic import BaseModel, EmailStr, validator
 router = APIRouter()
 
 
@@ -8,7 +9,13 @@ router = APIRouter()
 
 class CreateUserRequest(BaseModel):
     name: str
-    email: str
+    email: EmailStr  # validates email format automatically
+
+    @validator("name")
+    def name_not_empty(cls, v):
+        if not v.strip():
+            raise ValueError("Name cannot be empty")
+        return v.strip()
 
 
 # --- Routes ---
