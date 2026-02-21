@@ -63,14 +63,12 @@ async def stripe_webhook(request: Request):
 
         # Build Alma's message
         if radar and radar["should_block"]:
-            alma_message = f"Your payment of {amount} {currency} went through, but I'm concerned. {radar['alma_message']}"
-        elif radar and radar["risk_level"] == "elevated":
-            alma_message = f"Your payment of {amount} {currency} was successful. However, {radar['alma_message']}"
+            alma_message = radar["alma_message"]
         else:
             alma_message = f"Your payment of {amount} {currency} was successful."
 
         # Alert carer if fraud flagged
-        if carer_phone and radar and radar["risk_level"] in ["elevated", "highest"]:
+        if carer_phone and radar and radar.get("should_alert"):
             send_carer_sms(
                 carer_phone=carer_phone,
                 message=build_fraud_alert_message(user_name, amount, currency, radar["risk_level"], radar["alma_message"])
