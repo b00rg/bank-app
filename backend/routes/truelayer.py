@@ -1,4 +1,7 @@
+
 from fastapi import APIRouter, HTTPException, Query, Header, Request
+
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from services import truelayer
 from services import user_storage
@@ -13,6 +16,7 @@ class OnboardUserRequest(BaseModel):
     name: str
     email: str
     phone: str = ""
+    stripe_customer_id: str = ""
 
 
 class LinkBankRequest(BaseModel):
@@ -92,7 +96,8 @@ async def onboard_user(request: OnboardUserRequest):
         user_id=request.user_id,
         name=request.name,
         email=request.email,
-        phone=request.phone
+        phone=request.phone,
+        stripe_customer_id=request.stripe_customer_id
     )
     
     return {
@@ -444,23 +449,24 @@ async def get_user_transactions(user_id: str = Query(...), limit: int = Query(50
     }
 
 
+@router.get("/platform-history")
+async def get_platform_history(user_id: str = Query(...), limit: int = Query(50, ge=1, le=500)):
+    """
+    Get platform transaction history (sent/received between app users).
+    No TrueLayer auth required — used for the internal transfer feed.
+    """
+    user = user_storage.get_user(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail=f"User {user_id} not found")
+
+    transactions = transaction_storage.get_user_transactions(user_id, limit=limit)
+    return {"user_id": user_id, "transactions": transactions, "count": len(transactions)}
+
+
 @router.get("/callback")
-async def oauth_callback(code: str = Query(...), state: str = Query(None)):
+async def oauth_callback(code: str = Query(...)):
     """
     OAuth callback endpoint from TrueLayer.
-    User is redirected here after approving bank access.
-    Frontend should capture the code and call /link-bank.
-    
-    Args:
-        code: Authorization code from TrueLayer
-        state: State parameter for security (optional)
-    
-    Returns:
-        dict: Message with code for frontend
+    Redirects back to the frontend with the auth code as a URL parameter.
     """
-    return {
-        "message": "Authorization successful. Authorization code received.",
-        "code": code,
-        "state": state,
-        "next_step": "POST to /api/truelayer/link-bank with user_id and code"
-    }
+    return RedirectResponse(url=f"/index.html?code={code}")
