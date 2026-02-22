@@ -18,11 +18,17 @@ router = APIRouter()
 # -------------------------
 
 class CreateCardRequest(BaseModel):
-    phone: str
-    line1: str
-    city: str
-    postal_code: str
-    country: str
+    phone: str = None
+    line1: str = None
+    city: str = None
+    postal_code: str = None
+    country: str = None
+    weekly_limit_euros: float = 100.0  # Default limit
+    expiration_months: int = 12
+    billing_address: str = ""
+    billing_city: str = ""
+    billing_postal: str = ""
+    blocked_categories: list = []
 
 
 class CardActionRequest(BaseModel):
@@ -40,9 +46,9 @@ class UpdateLimitRequest(BaseModel):
 
 
 @router.post("/api/issuing/card/create")
-async def create_card(request: Request):
+async def create_card(request: Request, body: CreateCardRequest):
     """
-    Creates a virtual card for the user.
+    Creates a virtual card for the user with specified spending limit.
     Requires cardholder_id in session.
     """
     if not request.session.get("stripe_customer_id"):
@@ -54,13 +60,28 @@ async def create_card(request: Request):
 
     try:
         card = create_virtual_card(cardholder_id)
+        
+        # Set spending limit if provided
+        if body.weekly_limit_euros > 0:
+            update_spending_limit(card["card_id"], body.weekly_limit_euros)
+        
         request.session["card_id"] = card["card_id"]
+        request.session["card_expiration_months"] = body.expiration_months
+        request.session["card_billing_address"] = body.billing_address
+        request.session["card_billing_city"] = body.billing_city
+        request.session["card_billing_postal"] = body.billing_postal
+        request.session["card_blocked_categories"] = body.blocked_categories
         
         return JSONResponse(content={
             "success": True,
             "card_id": card["card_id"],
             "last4": card["last4"],
             "status": card["status"],
+            "spending_limit": body.weekly_limit_euros,
+            "expiration_months": body.expiration_months,
+            "billing_address": body.billing_address,
+            "billing_city": body.billing_city,
+            "blocked_categories": body.blocked_categories,
             "alma_message": f"Your virtual card {card['last4']} is ready to use!"
         })
     except Exception as e:

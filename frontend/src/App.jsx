@@ -14,6 +14,8 @@ import SendMoney from "./pages/SendMoney";
 import CardsScreen from "./pages/CardsScreen";
 import SupportScreen from "./pages/SupportScreen";
 import NotFound from "./pages/NotFound";
+import OverseerLogin from "./pages/OverseerLogin";
+import OverseerDashboard from "./pages/OverseerDashboard";
 
 const queryClient = new QueryClient();
 
@@ -27,6 +29,8 @@ const App = () => (
           <PhoneFrame>
             <Routes>
               <Route path="/" element={<AuthScreen />} />
+              <Route path="/overseer" element={<OverseerLogin />} />
+              <Route path="/overseer/dashboard" element={<OverseerDashboard />} />
               <Route path="/pin" element={<LoginScreen />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/account/:id" element={<AccountDetail />} />
