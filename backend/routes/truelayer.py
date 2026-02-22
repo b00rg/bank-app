@@ -1,8 +1,8 @@
 from fastapi import APIRouter, HTTPException, Query, Header
 from pydantic import BaseModel
-from backend.services import truelayer
-from backend.services import user_storage
-from backend.services import transaction_storage
+from services import truelayer
+from services import user_storage
+from services import transaction_storage
 
 router = APIRouter(prefix="/api/truelayer", tags=["TrueLayer"])
 

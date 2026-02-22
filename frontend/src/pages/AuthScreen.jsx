@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
+import { apiClient } from "@/lib/api";
 
 const AuthScreen = () => {
   const navigate = useNavigate();
@@ -7,10 +8,26 @@ const AuthScreen = () => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [name, setName] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    navigate("/");
+    setError("");
+    setIsLoading(true);
+
+    try {
+      if (isSignup) {
+        await apiClient.auth.signup(name, email, password);
+      } else {
+        await apiClient.auth.login(email, password);
+      }
+      navigate("/dashboard");
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -41,6 +58,7 @@ const AuthScreen = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 placeholder="Alma Smith"
+                required
                 className="w-full px-4 py-3 rounded-xl border border-border bg-card text-foreground text-body placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary min-h-[48px]"
               />
             </div>
@@ -55,6 +73,7 @@ const AuthScreen = () => {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="mail@example.com"
+              required
               className="w-full px-4 py-3 rounded-xl border border-border bg-card text-foreground text-body placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary min-h-[48px]"
             />
           </div>
@@ -68,17 +87,22 @@ const AuthScreen = () => {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               placeholder="••••••••"
+              required
               className="w-full px-4 py-3 rounded-xl border border-border bg-card text-foreground text-body placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary min-h-[48px]"
             />
           </div>
 
           <button
             type="submit"
-            className="btn-press w-full py-4 rounded-2xl bg-primary text-primary-foreground text-body-lg font-semibold min-h-[56px] mt-2"
-            onClick={() => navigate("/dashboard")}
+            disabled={isLoading}
+            className="btn-press w-full py-4 rounded-2xl bg-primary text-primary-foreground text-body-lg font-semibold min-h-[56px] mt-2 disabled:opacity-50"
           >
-            {isSignup ? "Sign Up" : "Log In"}
+            {isLoading ? "Loading..." : isSignup ? "Sign Up" : "Log In"}
           </button>
+
+          {error && (
+            <p className="text-sm text-red-500 mt-2">{error}</p>
+          )}
         </form>
       </div>
 
