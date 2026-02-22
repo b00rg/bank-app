@@ -16,6 +16,7 @@ import SupportScreen from "./pages/SupportScreen";
 import NotFound from "./pages/NotFound";
 import OverseerLogin from "./pages/OverseerLogin";
 import OverseerDashboard from "./pages/OverseerDashboard";
+import LinkBankScreen from "./pages/LinkBankScreen";
 
 const queryClient = new QueryClient();
 
@@ -29,6 +30,7 @@ const App = () => (
           <PhoneFrame>
             <Routes>
               <Route path="/" element={<AuthScreen />} />
+              <Route path="/link-bank" element={<LinkBankScreen />} />
               <Route path="/overseer" element={<OverseerLogin />} />
               <Route path="/overseer/dashboard" element={<OverseerDashboard />} />
               <Route path="/pin" element={<LoginScreen />} />

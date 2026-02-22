@@ -25,17 +25,10 @@ export const apiClient = {
 
   // Auth endpoints
   auth: {
-    signup: (name, email, password, overseerName, overseerNumber, overseerPassword) =>
-      apiClient.request("/api/user/create", {
+    signup: (userId, name, email) =>
+      apiClient.request("/api/truelayer/onboard", {
         method: "POST",
-        body: JSON.stringify({ 
-          name, 
-          email, 
-          password,
-          overseer_name: overseerName,
-          overseer_number: overseerNumber,
-          overseer_password: overseerPassword
-        }),
+        body: JSON.stringify({ user_id: userId, name, email }),
       }),
     login: (email, password) =>
       apiClient.request("/api/user/login", {
@@ -114,6 +107,11 @@ export const apiClient = {
   truelayer: {
     getAuthUrl: () =>
       apiClient.request("/api/truelayer/auth-url"),
+    linkBank: (userId, authCode) =>
+      apiClient.request("/api/truelayer/link-bank", {
+        method: "POST",
+        body: JSON.stringify({ user_id: userId, auth_code: authCode }),
+      }),
     getAccounts: () =>
       apiClient.request("/api/truelayer/accounts"),
     getAccountTransactions: (accountId) =>

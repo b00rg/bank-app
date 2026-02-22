@@ -26,7 +26,8 @@ app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET_KEY)
 # --- CORS middleware ---
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "http://localhost:8080"],
+    allow_origins=["http://localhost:3000", "http://localhost:8080", "http://10.198.63.210:8000","http://10.198.63.210:8080","http://10.6.141.104:8000","http://10.6.141.104:8080", "http://10.6.141.104:3000"],  # frontend dev servers
+
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
