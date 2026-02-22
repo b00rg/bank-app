@@ -14,6 +14,10 @@ build/
 venv/
 env/
 bank-app/
+users_data.csv/
+backend/users_data.csv/
+transactions_data.csv/
+backend/transactions_data.csv/
 
 # Node / React
 node_modules/
