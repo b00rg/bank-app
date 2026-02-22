@@ -1,54 +1,61 @@
-from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel, EmailStr, validator
+from fastapi import APIRouter, Request, HTTPException
+from fastapi.responses import JSONResponse
+from pydantic import BaseModel
+from services.issuing import create_issuing_cardholder
 from services.stripe import create_stripe_customer, get_stripe_customer
 
 router = APIRouter()
 
 
-# --- Request model ---
-
 class CreateUserRequest(BaseModel):
     name: str
-    email: EmailStr  # validates email format automatically
-
-    @validator("name")
-    def name_not_empty(cls, v):
-        if not v.strip():
-            raise ValueError("Name cannot be empty")
-        return v.strip()
+    email: str
 
 
-# --- Routes ---
 
 @router.post("/api/user/create")
 async def create_user(request: Request, body: CreateUserRequest):
     """
-    Creates a new user:
-    1. Creates a Stripe customer in test mode
-    2. Stores the Stripe customer ID in the server-side session
-    3. Returns the customer ID to the frontend
+    Creates a new user with Stripe customer and Issuing cardholder.
     """
     try:
-        stripe_customer_id = create_stripe_customer(
+        # Create Stripe customer
+        customer_id = create_stripe_customer(body.name, body.email)
+        print(f"DEBUG: Customer created: {customer_id}")
+        
+        # Create Issuing cardholder (with mock address for testing)
+        address = {
+            "line1": "123 Test Street",
+            "city": "Dublin",
+            "postal_code": "D01 1AA"
+        }
+        
+        cardholder = create_issuing_cardholder(
             name=body.name,
-            email=body.email
+            email=body.email,
+            phone="+353871234567",
+           
+            address=address
         )
-
+        print(f"DEBUG: Cardholder created: {cardholder}")
+        
+        # Store in session
+        request.session["stripe_customer_id"] = customer_id
+        request.session["cardholder_id"] = cardholder["cardholder_id"]
         request.session["user_name"] = body.name
         request.session["user_email"] = body.email
-        request.session["stripe_customer_id"] = stripe_customer_id
-
-        return {
+        
+        return JSONResponse(content={
             "success": True,
-            "stripe_customer_id": stripe_customer_id,
+            "stripe_customer_id": customer_id,
+            "cardholder_id": cardholder["cardholder_id"],
             "name": body.name,
-            "email": body.email,
-        }
-
+            "email": body.email
+        })
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to create user: {str(e)}")
-
-
+        print(f"DEBUG: Error creating user: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error creating user: {str(e)}")
+    
 @router.get("/api/user/me")
 async def get_current_user(request: Request):
     """
