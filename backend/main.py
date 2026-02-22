@@ -11,6 +11,7 @@ from routes.carer import router as carer_router
 from routes.payments import router as payments_router
 from routes.issuing import router as issuing_router
 from routes.transactions import router as transactions_router
+from routes.chat import router as chat_router
 from routes import truelayer
 
 load_dotenv()
@@ -26,6 +27,7 @@ app.add_middleware(SessionMiddleware, secret_key=SESSION_SECRET_KEY)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["http://localhost:3000", "http://localhost:8080", "http://10.198.63.210:8000","http://10.198.63.210:8080","http://10.6.141.104:8000","http://10.6.141.104:8080", "http://10.6.141.104:3000"],  # frontend dev servers
+
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -36,9 +38,10 @@ app.include_router(user_router)
 app.include_router(truelayer.router)
 app.include_router(webhooks_router)
 app.include_router(carer_router)
-app.include_router(payments_router)
+app.include_router(payments_router)      # handles /api/payments/create + /api/payments/payees
 app.include_router(issuing_router)
 app.include_router(transactions_router)
+app.include_router(chat_router)         # handles /api/chat + /api/chat/state
 
 # --- Serve static frontend (optional, for production build) ---
 if os.path.isdir("static"):

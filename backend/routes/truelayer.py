@@ -1,5 +1,8 @@
+
 import os
-from fastapi import APIRouter, HTTPException, Query, Header
+
+from fastapi import APIRouter, HTTPException, Query, Header, Request
+
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
 from services import truelayer
@@ -214,28 +217,36 @@ async def get_user_profile(user_id: str):
 
 
 @router.get("/accounts")
-async def get_accounts(authorization: str = Header(None)):
+async def get_accounts(request: Request):
     """
     Fetch all linked bank accounts.
-    Uses access token from Authorization header (Bearer token).
+    Can use Authorization header or session access token.
     
     Returns:
         list of accounts with account_id, name, type, currency
     """
-    # Extract token from Authorization header
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    # Try to get token from Authorization header first, then from session
+    auth_header = request.headers.get("Authorization", "")
+    token = None
     
-    token = authorization.replace("Bearer ", "")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.replace("Bearer ", "")
+    else:
+        # Try to get from session
+        token = request.session.get("truelayer_access_token")
+    
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing authorization token")
+    
     accounts = truelayer.get_accounts(access_token=token)
     return accounts
 
 
 @router.get("/accounts/{account_id}/transactions")
-async def get_transactions(account_id: str, limit: int = Query(20, ge=1, le=100), authorization: str = Header(None)):
+async def get_transactions(account_id: str, request: Request, limit: int = Query(20, ge=1, le=100)):
     """
     Fetch transactions for a specific account.
-    Uses access token from Authorization header (Bearer token).
+    Can use Authorization header or session access token.
     
     Args:
         account_id: The account ID
@@ -244,20 +255,28 @@ async def get_transactions(account_id: str, limit: int = Query(20, ge=1, le=100)
     Returns:
         list of transactions with amount, date, description, status
     """
-    # Extract token from Authorization header
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    # Try to get token from Authorization header first, then from session
+    auth_header = request.headers.get("Authorization", "")
+    token = None
     
-    token = authorization.replace("Bearer ", "")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.replace("Bearer ", "")
+    else:
+        # Try to get from session
+        token = request.session.get("truelayer_access_token")
+    
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing authorization token")
+    
     transactions = truelayer.get_transactions(account_id, access_token=token)
     return transactions
 
 
 @router.get("/accounts/{account_id}/balance")
-async def get_balance(account_id: str, authorization: str = Header(None)):
+async def get_balance(account_id: str, request: Request):
     """
     Fetch balance for a specific account.
-    Uses access token from Authorization header (Bearer token).
+    Can use Authorization header or session access token.
     
     Args:
         account_id: The account ID
@@ -265,11 +284,19 @@ async def get_balance(account_id: str, authorization: str = Header(None)):
     Returns:
         dict with available and current balance
     """
-    # Extract token from Authorization header
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    # Try to get token from Authorization header first, then from session
+    auth_header = request.headers.get("Authorization", "")
+    token = None
     
-    token = authorization.replace("Bearer ", "")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.replace("Bearer ", "")
+    else:
+        # Try to get from session
+        token = request.session.get("truelayer_access_token")
+    
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing authorization token")
+    
     balance = truelayer.get_balance(account_id, access_token=token)
     return balance
 
