@@ -1,20 +1,16 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { ArrowLeft, ChevronDown, ChevronUp } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
-
-const accounts = [
-  { id: 1, name: "Account 1", balance: 2156.0 },
-  { id: 2, name: "Account 2", balance: 1239.05 },
-  { id: 3, name: "Account 3", balance: 1239.05 },
-];
+import { apiClient } from "@/lib/api";
+import { useSpeech } from "@/hooks/useSpeech";
 
 const cardNames = {
   1: "Card 1",
   2: "Card 2",
 };
 
-const transactionsByMonth = {
+const mockTransactionsByMonth = {
   December: [],
   November: [
     { name: "Shell London", date: "5 December 2020", amount: -30.0, initials: "SL" },
@@ -35,17 +31,132 @@ const transactionsByMonth = {
   ],
 };
 
-const months = Object.keys(transactionsByMonth);
-
 const Transactions = () => {
   const navigate = useNavigate();
   const { id } = useParams();
   const location = useLocation();
+  const { speak } = useSpeech();
   const isCard = location.pathname.startsWith("/card/");
-  const account = accounts.find((a) => a.id === Number(id)) || accounts[0];
-  const displayName = isCard ? (cardNames[Number(id)] || `Card ${id}`) : account.name;
-  const backPath = isCard ? "/cards" : `/account/${id}`;
+  const [accountData, setAccountData] = useState(null);
+  const [transactionsByMonth, setTransactionsByMonth] = useState(mockTransactionsByMonth);
+  const [months, setMonths] = useState(Object.keys(mockTransactionsByMonth));
+  const [loading, setLoading] = useState(true);
   const [openMonth, setOpenMonth] = useState("November");
+
+  useEffect(() => {
+    const fetchTransactions = async () => {
+      try {
+        setLoading(true);
+
+        if (isCard) {
+          // Card transactions - keep mock data for now
+          setTransactionsByMonth(mockTransactionsByMonth);
+          setMonths(Object.keys(mockTransactionsByMonth));
+          setAccountData({
+            name: cardNames[Number(id)] || `Card ${id}`,
+            balance: 0,
+          });
+          return;
+        }
+
+        // Fetch account and transactions from TrueLayer
+        const accountsRes = await apiClient.truelayer.getAccounts();
+        const accounts = Array.isArray(accountsRes)
+          ? accountsRes
+          : accountsRes?.results || accountsRes?.accounts || [];
+
+        const account = accounts.find((a) => a.id === id);
+
+        if (!account) {
+          setAccountData(null);
+          setTransactionsByMonth(mockTransactionsByMonth);
+          setMonths(Object.keys(mockTransactionsByMonth));
+          setLoading(false);
+          return;
+        }
+
+        setAccountData(account);
+
+        // Fetch transactions
+        const transactionsRes = await apiClient.truelayer.getAccountTransactions(id);
+        const transactions = Array.isArray(transactionsRes)
+          ? transactionsRes
+          : transactionsRes?.results || transactionsRes?.transactions || [];
+
+        // Group transactions by month
+        const grouped = {};
+
+        transactions.forEach((tx) => {
+          try {
+            const date = new Date(tx.timestamp || tx.date || tx.posting_date);
+            if (isNaN(date.getTime())) return;
+
+            const monthYear = date.toLocaleString("en-US", {
+              month: "long",
+              year: "numeric",
+            });
+
+            if (!grouped[monthYear]) {
+              grouped[monthYear] = [];
+            }
+
+            // Extract initials from merchant name
+            const merchantName = tx.merchant_name || tx.description || "Transaction";
+            const initials = merchantName
+              .split(" ")
+              .map((w) => w[0])
+              .join("")
+              .toUpperCase()
+              .slice(0, 2);
+
+            grouped[monthYear].push({
+              name: merchantName,
+              date: date.toLocaleDateString("en-GB", {
+                day: "numeric",
+                month: "long",
+                year: "numeric",
+              }),
+              amount: tx.amount || 0,
+              initials: initials || "TX",
+              timestamp: date,
+            });
+          } catch (e) {
+            // Skip malformed transactions
+          }
+        });
+
+        // Sort months by date descending
+        const monthKeys = Object.keys(grouped).sort((a, b) => {
+          const dateA = new Date(`${a} 1`);
+          const dateB = new Date(`${b} 1`);
+          return dateB - dateA;
+        });
+
+        // Sort transactions within each month by date descending
+        monthKeys.forEach((month) => {
+          grouped[month].sort((a, b) => b.timestamp - a.timestamp);
+        });
+
+        setTransactionsByMonth(grouped);
+        setMonths(monthKeys);
+        setOpenMonth(monthKeys[0] || "November");
+      } catch (error) {
+        console.error("Failed to fetch transactions:", error);
+        setTransactionsByMonth(mockTransactionsByMonth);
+        setMonths(Object.keys(mockTransactionsByMonth));
+        setAccountData(null);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchTransactions();
+  }, [id, isCard]);
+
+  const displayName = accountData?.name || (isCard ? `Card ${id}` : "Account");
+  const displayBalance = accountData?.balance || 0;
+  const currency = accountData?.currency || "€";
+  const backPath = isCard ? "/cards" : `/account/${id}`;
 
   const toggleMonth = (month) => {
     setOpenMonth(openMonth === month ? null : month);
@@ -71,16 +182,25 @@ const Transactions = () => {
 
           <div className="mt-6">
             <p className="text-sm text-muted-foreground tracking-wide uppercase">Current balance</p>
-            <p className="text-heading-lg text-foreground mt-1">
-              €{account.balance.toLocaleString("en", { minimumFractionDigits: 2 })}
-            </p>
+            {loading ? (
+              <p className="text-heading-lg text-foreground mt-1">Loading...</p>
+            ) : (
+              <p className="text-heading-lg text-foreground mt-1">
+                {currency}
+                {displayBalance.toLocaleString("en", { minimumFractionDigits: 2 })}
+              </p>
+            )}
           </div>
         </div>
 
-        {/* Year Header */}
-        <div className="bg-secondary text-secondary-foreground rounded-xl px-5 py-2.5 mb-1">
-          <p className="text-body font-semibold text-center tracking-wide">2026</p>
-        </div>
+        {/* Year Header - show most recent year */}
+        {months.length > 0 && (
+          <div className="bg-secondary text-secondary-foreground rounded-xl px-5 py-2.5 mb-1">
+            <p className="text-body font-semibold text-center tracking-wide">
+              {new Date(months[0]).getFullYear()}
+            </p>
+          </div>
+        )}
 
         {/* Month Accordions */}
         <div className="slide-up">

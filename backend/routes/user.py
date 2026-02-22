@@ -71,6 +71,9 @@ async def create_user(request: Request, body: CreateUserRequest):
         request.session["overseer_name"] = body.overseer_name
         request.session["overseer_number"] = body.overseer_number
         
+        # Store a demo TrueLayer access token for testing (in production, this would be from actual OAuth)
+        request.session["truelayer_access_token"] = "demo_token_" + body.email.replace("@", "_").replace(".", "_")
+        
         # Store hashed password if provided
         if body.password:
             request.session["password_hash"] = hash_password(body.password)
