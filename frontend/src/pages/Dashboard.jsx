@@ -14,12 +14,10 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const { speak } = useVoice();
 
-  const handleAccountClick = (account) => {
-    if (account.id === 1) {
-      speak("account1");
-    }
-    navigate(`/account/${account.id}`);
-  };
+const handleAccountClick = (account) => {
+  speak(`account${account.id}`);
+  navigate(`/account/${account.id}`);
+};
 
   return (
     <div className="flex flex-col h-full">

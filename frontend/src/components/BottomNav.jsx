@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Home, CreditCard, HelpCircle, Mic } from "lucide-react";
+import { useVoice } from "@/context/VoiceContext";
 
 const tabs = [
   { label: "Home", icon: Home, path: "/dashboard" },
@@ -10,18 +11,49 @@ const tabs = [
 
 const BottomNav = () => {
   const navigate = useNavigate();
+  const { speak } = useVoice();
   const location = useLocation();
   const [isRecording, setIsRecording] = useState(false);
 
+  const handleHomeClick = useCallback(() => {
+    // home logic here
+    speak('dashboard');
+    navigate("/dashboard");
+  }, [navigate]);
+
+  const handleCardsClick = useCallback(() => {
+    // cards logic here
+    speak('cards');
+    navigate("/cards");
+  }, [navigate]);
+
+  const handleSupportClick = useCallback(() => {
+    // support logic here
+    speak('support');
+    navigate("/support");
+  }, [navigate]);
+
+  const tabHandlers = {
+    Home: handleHomeClick,
+    Cards: handleCardsClick,
+    Support: handleSupportClick,
+  };
+
   const handleMicPointerDown = useCallback(() => {
     setIsRecording(true);
+    // start recording logic here
   }, []);
 
   const handleMicPointerUp = useCallback(() => {
     setIsRecording(false);
+    // stop recording / send voice command here
   }, []);
 
   const handleMicPointerLeave = useCallback(() => {
+    setIsRecording(false);
+  }, []);
+
+  const handleMicPointerCancel = useCallback(() => {
     setIsRecording(false);
   }, []);
 
@@ -43,7 +75,7 @@ const BottomNav = () => {
             role="tab"
             aria-selected={isActive}
             aria-label={tab.label}
-            onClick={() => navigate(tab.path)}
+            onClick={tabHandlers[tab.label]}
             className={`btn-press flex flex-col items-center gap-1 min-w-[64px] min-h-[48px] px-2 py-1.5 rounded-xl transition-colors ${
               isActive
                 ? "text-secondary-foreground"
@@ -73,7 +105,7 @@ const BottomNav = () => {
           onPointerDown={handleMicPointerDown}
           onPointerUp={handleMicPointerUp}
           onPointerLeave={handleMicPointerLeave}
-          onPointerCancel={handleMicPointerUp}
+          onPointerCancel={handleMicPointerCancel}
           className={`relative flex flex-col items-center justify-center min-w-[44px] min-h-[44px] rounded-full transition-all duration-200 select-none touch-none ${
             isRecording
               ? "bg-primary text-primary-foreground scale-105 shadow-lg"

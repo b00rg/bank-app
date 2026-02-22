@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Check, Delete, ChevronDown, ChevronUp } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useVoice } from "@/context/VoiceContext";
 
 const contacts = [
   { id: 1, name: "Sarah", relation: "Granddaughter", initials: "SA", color: "bg-primary/20 text-primary" },
@@ -18,6 +19,7 @@ const SendMoney = () => {
   const [amount, setAmount] = useState("");
   const [newAccountOpen, setNewAccountOpen] = useState(false);
   const [newAccount, setNewAccount] = useState({ name: "", sortCode: "", accountNumber: "" });
+  const { speak } = useVoice();
 
   const handleDigit = (d) => {
     if (d === "." && amount.includes(".")) return;
@@ -83,6 +85,7 @@ const SendMoney = () => {
                 <button
                   key={contact.id}
                   onClick={() => {
+                    speak(`contact${contact.id}`);
                     setSelectedContact(contact);
                     setNewAccountOpen(false);
                     setStep(2);
@@ -108,7 +111,10 @@ const SendMoney = () => {
             {/* Send to new account */}
             <div className="mt-6">
               <button
-                onClick={() => setNewAccountOpen(!newAccountOpen)}
+                onClick={() => {
+                  speak("sendmoneytonewaccount");
+                  setNewAccountOpen(!newAccountOpen);
+                }}
                 className={`btn-press w-full flex items-center justify-between p-4 border-2 transition-colors ${
                   newAccountOpen
                     ? "rounded-t-2xl border-b-0 border-border bg-card"

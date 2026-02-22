@@ -40,7 +40,10 @@ const CardsScreen = () => {
             {physicalCards.map((card) => (
               <button
                 key={card.id}
-                onClick={() => navigate(`/card/${card.id}/transactions`)}
+                onClick={() => {
+                  speak(`card${card.id}`);
+                  navigate(`/card/${card.id}/transactions`);
+                }}
                 className="btn-press w-full text-left rounded-2xl p-6 bg-secondary text-secondary-foreground shadow-md"
                 aria-label={`${card.type}, ${card.number}`}
               >
