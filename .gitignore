@@ -36,3 +36,6 @@ build/
 # Logs
 *.log
 logs/
+
+../.DS_Store.DS_Store
+**/.DS_Store

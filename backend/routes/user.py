@@ -1,6 +1,7 @@
 from fastapi import APIRouter, HTTPException, Request
-from pydantic import BaseModel
-from backend.services.stripe import create_stripe_customer, get_stripe_customer
+from pydantic import BaseModel, EmailStr, validator
+from services.stripe import create_stripe_customer, get_stripe_customer
+
 router = APIRouter()
 
 
@@ -8,7 +9,13 @@ router = APIRouter()
 
 class CreateUserRequest(BaseModel):
     name: str
-    email: str
+    email: EmailStr  # validates email format automatically
+
+    @validator("name")
+    def name_not_empty(cls, v):
+        if not v.strip():
+            raise ValueError("Name cannot be empty")
+        return v.strip()
 
 
 # --- Routes ---
@@ -22,13 +29,11 @@ async def create_user(request: Request, body: CreateUserRequest):
     3. Returns the customer ID to the frontend
     """
     try:
-        # Create Stripe customer
         stripe_customer_id = create_stripe_customer(
             name=body.name,
             email=body.email
         )
 
-        # Store in session
         request.session["user_name"] = body.name
         request.session["user_email"] = body.email
         request.session["stripe_customer_id"] = stripe_customer_id
