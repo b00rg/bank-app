@@ -1,22 +1,16 @@
 import React from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import { useNavigate, useParams, useLocation } from "react-router-dom";
 import { ArrowLeft, Send, List } from "lucide-react";
 import BottomNav from "@/components/BottomNav";
 import { useVoice } from "@/context/VoiceContext";
 
-
-const accounts = [
-  { id: 1, name: "Account 1" },
-  { id: 2, name: "Account 2" },
-  { id: 3, name: "Account 3" },
-];
-
 const AccountDetail = () => {
   const navigate = useNavigate();
   const { id } = useParams();
-  const account = accounts.find((a) => a.id === Number(id)) || accounts[0];
+  const location = useLocation();
   const { speak } = useVoice();
-  
+
+  const account = location.state?.account || { account_id: id, name: "Account" };
 
   return (
     <div className="flex flex-col h-full">
@@ -39,7 +33,7 @@ const AccountDetail = () => {
           <div className="space-y-4 w-full">
             <button
               onClick={() => {
-                speak(`sendaccount${account.id}`);
+                speak(`sendaccount${account.account_id}`);
                 navigate("/send");
               }}
               className="btn-press w-full flex items-center justify-center gap-3 p-5 rounded-2xl bg-primary text-primary-foreground min-h-[64px]"
@@ -51,8 +45,8 @@ const AccountDetail = () => {
 
             <button
               onClick={() => {
-                speak(`account${account.id}Trans`);
-                navigate(`/account/${account.id}/transactions`);
+                speak(`account${account.account_id}Trans`);
+                navigate(`/account/${encodeURIComponent(account.account_id)}/transactions`, { state: { account } });
               }}
               className="btn-press w-full flex items-center justify-center gap-3 p-5 rounded-2xl bg-card border border-border text-foreground hover:bg-muted transition-colors min-h-[64px]"
               aria-label="See Transactions"

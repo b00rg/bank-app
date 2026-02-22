@@ -5,12 +5,6 @@ import BottomNav from "@/components/BottomNav";
 import { useVoice } from "@/context/VoiceContext";
 import { apiClient } from "@/lib/api";
 
-const mockAccounts = [
-  { id: 1, name: "Account 1", type: "Personal Account", sortCode: "08-09-10", accountNumber: "4239489238", balance: 1239.05 },
-  { id: 2, name: "Account 2", type: "Personal Account", sortCode: "08-09-10", accountNumber: "4239489238", balance: 1239.05 },
-  { id: 3, name: "Account 3", type: "Personal Account", sortCode: "08-09-10", accountNumber: "4239489238", balance: 1239.05 },
-];
-
 const Dashboard = () => {
   const navigate = useNavigate();
   const { speak } = useVoice();
@@ -25,26 +19,28 @@ const Dashboard = () => {
   const fetchAccounts = async () => {
     try {
       setIsLoading(true);
-      // Try to fetch from TrueLayer, fallback to mock data if not available
-      try {
-        const data = await apiClient.truelayer.getAccounts();
-        setAccounts(Array.isArray(data) ? data : mockAccounts);
-      } catch (err) {
-        console.warn("TrueLayer fetch failed, using mock data:", err.message);
-        setAccounts(mockAccounts);
+      const userId = localStorage.getItem("user_id");
+      if (!userId) {
+        setError("No user session found. Please log in.");
+        return;
       }
+      const data = await apiClient.truelayer.getMyAccounts(userId);
+      setAccounts(data.accounts || []);
     } catch (err) {
       setError(err.message);
-      console.error("Failed to fetch accounts:", err);
-      setAccounts(mockAccounts);
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleAccountClick = (account) => {
-    speak(`account${account.id}`);
-    navigate(`/account/${account.id}`);
+    speak(`account${account.account_id}`);
+    navigate(`/account/${encodeURIComponent(account.account_id)}`, { state: { account } });
+  };
+
+  const formatSortCode = (sc) => {
+    if (!sc) return null;
+    return sc.replace(/(\d{2})(\d{2})(\d{2})/, "$1-$2-$3");
   };
 
   return (
@@ -77,10 +73,10 @@ const Dashboard = () => {
           <div className="space-y-4 slide-up">
             {accounts.map((account) => (
               <button
-                key={account.id}
+                key={account.account_id}
                 onClick={() => handleAccountClick(account)}
                 className="btn-press w-full text-left bg-card rounded-[20px] p-6 card-shadow border-2 border-foreground/40 hover:shadow-[0_8px_32px_rgba(79,55,47,0.18)] transition-all duration-200"
-                aria-label={`${account.name}, balance €${account.balance.toFixed(2)}`}
+                aria-label={`${account.name}, balance ${account.currency} ${account.balance?.toFixed(2)}`}
               >
                 <div className="flex items-center gap-2 mb-1">
                   <ArrowUpLeft size={25} className="text-foreground shrink-0" />
@@ -89,17 +85,29 @@ const Dashboard = () => {
                 <p className="text-sm text-muted-foreground mb-4">{account.type}</p>
 
                 <div className="space-y-4">
-                  <div className="space-y-0.5">
-                    <p className="text-sm text-muted-foreground">Sort Code</p>
-                    <p className="text-body font-semibold text-foreground">{account.sortCode}</p>
-                  </div>
-                  <div className="space-y-0.5">
-                    <p className="text-sm text-muted-foreground">Account Number</p>
-                    <p className="text-body font-semibold text-foreground">{account.accountNumber}</p>
-                  </div>
+                  {formatSortCode(account.sort_code) && (
+                    <div className="space-y-0.5">
+                      <p className="text-sm text-muted-foreground">Sort Code</p>
+                      <p className="text-body font-semibold text-foreground">{formatSortCode(account.sort_code)}</p>
+                    </div>
+                  )}
+                  {account.account_number && (
+                    <div className="space-y-0.5">
+                      <p className="text-sm text-muted-foreground">Account Number</p>
+                      <p className="text-body font-semibold text-foreground">{account.account_number}</p>
+                    </div>
+                  )}
+                  {account.iban && !account.account_number && (
+                    <div className="space-y-0.5">
+                      <p className="text-sm text-muted-foreground">IBAN</p>
+                      <p className="text-body font-semibold text-foreground">{account.iban}</p>
+                    </div>
+                  )}
                   <div className="space-y-0.5">
                     <p className="text-sm text-muted-foreground">Balance</p>
-                    <p className="text-body font-semibold text-foreground">€{account.balance.toFixed(2)}</p>
+                    <p className="text-body font-semibold text-foreground">
+                      {account.currency} {account.balance?.toFixed(2) ?? "—"}
+                    </p>
                   </div>
                 </div>
               </button>

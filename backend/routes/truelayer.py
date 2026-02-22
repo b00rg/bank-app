@@ -444,6 +444,64 @@ async def get_platform_history(user_id: str = Query(...), limit: int = Query(50,
     return {"user_id": user_id, "transactions": transactions, "count": len(transactions)}
 
 
+@router.get("/my-accounts")
+async def get_my_accounts(user_id: str = Query(...)):
+    """
+    Get user's bank accounts and balances using their stored TrueLayer access token.
+    """
+    user = user_storage.get_user(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    access_token = user.get("access_token")
+    if not access_token:
+        raise HTTPException(status_code=400, detail="No bank linked for this user")
+
+    accounts_data = truelayer.get_accounts(access_token=access_token)
+    accounts = accounts_data.get("results", [])
+
+    result = []
+    for account in accounts:
+        account_id = account.get("account_id")
+        try:
+            balance_data = truelayer.get_balance(account_id, access_token=access_token)
+            balance_results = balance_data.get("results", [{}])
+            balance = balance_results[0] if balance_results else {}
+        except Exception:
+            balance = {}
+
+        account_number = account.get("account_number", {})
+        result.append({
+            "account_id": account_id,
+            "name": account.get("display_name", ""),
+            "type": account.get("account_type", ""),
+            "currency": account.get("currency", ""),
+            "sort_code": account_number.get("sort_code", ""),
+            "account_number": account_number.get("number", ""),
+            "iban": account_number.get("iban", ""),
+            "balance": balance.get("available", balance.get("current", 0.0)),
+        })
+
+    return {"accounts": result}
+
+
+@router.get("/my-transactions/{account_id}")
+async def get_my_transactions(account_id: str, user_id: str = Query(...)):
+    """
+    Get transactions for a specific account using the stored TrueLayer access token.
+    """
+    user = user_storage.get_user(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    access_token = user.get("access_token")
+    if not access_token:
+        raise HTTPException(status_code=400, detail="No bank linked for this user")
+
+    tx_data = truelayer.get_transactions(account_id, access_token=access_token)
+    return {"transactions": tx_data.get("results", [])}
+
+
 @router.get("/callback")
 async def oauth_callback(code: str = Query(...), state: str = Query(None)):
     """

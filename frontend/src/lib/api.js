@@ -118,6 +118,10 @@ export const apiClient = {
       apiClient.request(`/api/truelayer/accounts/${accountId}/transactions`),
     getAccountBalance: (accountId) =>
       apiClient.request(`/api/truelayer/accounts/${accountId}/balance`),
+    getMyAccounts: (userId) =>
+      apiClient.request(`/api/truelayer/my-accounts?user_id=${encodeURIComponent(userId)}`),
+    getMyTransactions: (accountId, userId) =>
+      apiClient.request(`/api/truelayer/my-transactions/${encodeURIComponent(accountId)}?user_id=${encodeURIComponent(userId)}`),
   },
 
   // Overseer endpoints
