@@ -54,7 +54,7 @@ const AuthScreen = () => {
               type="email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
-              placeholder="email@example.com"
+              placeholder="mail@example.com"
               className="w-full px-4 py-3 rounded-xl border border-border bg-card text-foreground text-body placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-primary min-h-[48px]"
             />
           </div>
@@ -75,6 +75,7 @@ const AuthScreen = () => {
           <button
             type="submit"
             className="btn-press w-full py-4 rounded-2xl bg-primary text-primary-foreground text-body-lg font-semibold min-h-[56px] mt-2"
+            onClick={() => navigate("/dashboard")}
           >
             {isSignup ? "Sign Up" : "Log In"}
           </button>

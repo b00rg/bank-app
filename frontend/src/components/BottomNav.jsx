@@ -1,7 +1,7 @@
-import React, { useState, useCallback } from "react";
+import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Home, CreditCard, HelpCircle, Mic } from "lucide-react";
-import { useVoice } from "@/context/VoiceContext";
+import VoiceOverlay from "./VoiceOverlay"; // Import the component we just made
 
 const tabs = [
   { label: "Home", icon: Home, path: "/dashboard" },
@@ -11,118 +11,119 @@ const tabs = [
 
 const BottomNav = () => {
   const navigate = useNavigate();
-  const { speak } = useVoice();
   const location = useLocation();
-  const [isRecording, setIsRecording] = useState(false);
+  
+  // State: 'idle', 'listening', 'processing'
+  const [voiceState, setVoiceState] = useState("idle");
+  const timeoutRef = useRef(null);
 
-  const handleHomeClick = useCallback(() => {
-    // home logic here
-    speak('dashboard');
-    navigate("/dashboard");
-  }, [navigate]);
-
-  const handleCardsClick = useCallback(() => {
-    // cards logic here
-    speak('cards');
-    navigate("/cards");
-  }, [navigate]);
-
-  const handleSupportClick = useCallback(() => {
-    // support logic here
-    speak('support');
-    navigate("/support");
-  }, [navigate]);
-
-  const tabHandlers = {
-    Home: handleHomeClick,
-    Cards: handleCardsClick,
-    Support: handleSupportClick,
-  };
-
-  const handleMicPointerDown = useCallback(() => {
-    setIsRecording(true);
-    // start recording logic here
+  // Start Listening
+  const handleMicDown = useCallback((e) => {
+    // Prevent default touch actions (scrolling, etc) while holding
+    if(e.cancelable) e.preventDefault();
+    setVoiceState("listening");
   }, []);
 
-  const handleMicPointerUp = useCallback(() => {
-    setIsRecording(false);
-    // stop recording / send voice command here
+  // Stop Listening & Start Processing
+  const handleMicUp = useCallback(() => {
+    if (voiceState === "listening") {
+      setVoiceState("processing");
+
+      // Simulate API call delay (2 seconds)
+      timeoutRef.current = setTimeout(() => {
+        setVoiceState("idle");
+        // Optional: Navigate or show a toast here after "success"
+      }, 2500);
+    }
+  }, [voiceState]);
+
+  // Clean up timeout if component unmounts
+  useEffect(() => {
+    return () => {
+      if (timeoutRef.current) clearTimeout(timeoutRef.current);
+    };
   }, []);
 
-  const handleMicPointerLeave = useCallback(() => {
-    setIsRecording(false);
-  }, []);
+  // Global event listener to catch 'pointerup' even if finger drags off button
+  useEffect(() => {
+    const handleGlobalUp = () => {
+      if (voiceState === "listening") {
+        handleMicUp();
+      }
+    };
 
-  const handleMicPointerCancel = useCallback(() => {
-    setIsRecording(false);
-  }, []);
+    window.addEventListener('pointerup', handleGlobalUp);
+    window.addEventListener('touchend', handleGlobalUp);
+    return () => {
+      window.removeEventListener('pointerup', handleGlobalUp);
+      window.removeEventListener('touchend', handleGlobalUp);
+    };
+  }, [voiceState, handleMicUp]);
 
   return (
-    <nav
-      className="flex items-center justify-around bg-secondary px-2 py-2 gap-1"
-      role="tablist"
-      aria-label="Main navigation"
-    >
-      {tabs.map((tab) => {
-        const isActive =
-          location.pathname === tab.path ||
-          (tab.path === "/dashboard" && location.pathname.startsWith("/send"));
-        const Icon = tab.icon;
+    <>
+      {/* 
+        The Overlay sits outside the nav structure conceptually, 
+        but inside the component so it shares state.
+        We use fixed positioning in the Overlay CSS to cover the phone screen.
+      */}
+      <VoiceOverlay currentState={voiceState} />
 
-        return (
+      <nav
+        className="flex items-center justify-around bg-secondary px-2 py-2 gap-1 relative z-40"
+        role="tablist"
+        aria-label="Main navigation"
+      >
+        {tabs.map((tab) => {
+          const isActive =
+            location.pathname === tab.path ||
+            (tab.path === "/dashboard" && location.pathname.startsWith("/send"));
+          const Icon = tab.icon;
+
+          return (
+            <button
+              key={tab.label}
+              role="tab"
+              aria-selected={isActive}
+              aria-label={tab.label}
+              onClick={() => navigate(tab.path)}
+              className={`btn-press flex flex-col items-center gap-1 min-w-[64px] min-h-[48px] px-2 py-1.5 rounded-xl transition-colors ${
+                isActive
+                  ? "text-secondary-foreground"
+                  : "text-secondary-foreground/50 hover:text-secondary-foreground/80"
+              }`}
+            >
+              <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
+              <span className="text-xs font-semibold">{tab.label}</span>
+            </button>
+          );
+        })}
+
+        {/* Voice Command Button */}
+        <div className="relative flex flex-col items-center gap-1 min-w-[56px] min-h-[48px]">
           <button
-            key={tab.label}
-            role="tab"
-            aria-selected={isActive}
-            aria-label={tab.label}
-            onClick={tabHandlers[tab.label]}
-            className={`btn-press flex flex-col items-center gap-1 min-w-[64px] min-h-[48px] px-2 py-1.5 rounded-xl transition-colors ${
-              isActive
-                ? "text-secondary-foreground"
-                : "text-secondary-foreground/50 hover:text-secondary-foreground/80"
+            type="button"
+            aria-label="Hold for voice command"
+            onPointerDown={handleMicDown}
+            // Note: onPointerUp is handled by window listener for better UX
+            className={`relative flex flex-col items-center justify-center min-w-[44px] min-h-[44px] rounded-full transition-all duration-300 select-none touch-none ${
+              voiceState !== 'idle'
+                ? "bg-primary text-primary-foreground scale-90 opacity-0" // Hide visually when overlay takes over
+                : "bg-secondary-foreground/15 text-secondary-foreground hover:bg-secondary-foreground/25"
             }`}
           >
-            <Icon size={24} strokeWidth={isActive ? 2.5 : 2} />
-            <span className="text-xs font-semibold">{tab.label}</span>
+            <Mic size={22} strokeWidth={2.5} />
           </button>
-        );
-      })}
-
-      {/* Voice command: press and hold to "record" */}
-      <div className="relative flex flex-col items-center gap-1 min-w-[56px] min-h-[48px]">
-        {isRecording && (
-          <span
-            className="absolute -top-6 left-1/2 -translate-x-1/2 text-[10px] font-semibold text-primary whitespace-nowrap voice-recording-pulse"
-            aria-live="polite"
+          <span 
+            className={`text-[10px] font-semibold text-secondary-foreground/70 transition-opacity ${
+              voiceState !== 'idle' ? 'opacity-0' : 'opacity-100'
+            }`}
           >
-            Listening…
+            Voice
           </span>
-        )}
-        <button
-          type="button"
-          aria-label={isRecording ? "Release to send voice command" : "Hold for voice command"}
-          aria-pressed={isRecording}
-          onPointerDown={handleMicPointerDown}
-          onPointerUp={handleMicPointerUp}
-          onPointerLeave={handleMicPointerLeave}
-          onPointerCancel={handleMicPointerCancel}
-          className={`relative flex flex-col items-center justify-center min-w-[44px] min-h-[44px] rounded-full transition-all duration-200 select-none touch-none ${
-            isRecording
-              ? "bg-primary text-primary-foreground scale-105 shadow-lg"
-              : "bg-secondary-foreground/15 text-secondary-foreground hover:bg-secondary-foreground/25"
-          }`}
-        >
-          {isRecording && (
-            <span
-              className="absolute inset-0 rounded-full border-2 border-primary border-opacity-60 voice-recording-ring"
-              aria-hidden
-            />
-          )}
-          <Mic size={22} strokeWidth={2.5} className="relative z-10" />
-        </button>
-        <span className="text-[10px] font-semibold text-secondary-foreground/70">Voice</span>
-      </div>
-    </nav>
+        </div>
+      </nav>
+    </>
   );
 };
 
