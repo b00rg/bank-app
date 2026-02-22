@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Request, HTTPException
+from fastapi import APIRouter, Request, HTTPException, Query
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 import stripe
@@ -10,6 +10,7 @@ from services.alerts import (
     build_fraud_alert_message,
     build_large_payment_message,
 )
+from services import user_storage, transaction_storage
 
 load_dotenv()
 
@@ -166,3 +167,82 @@ async def test_radar(request: Request):
 
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Test failed: {str(e)}")
+
+
+# --- Platform user-to-user transfers ---
+
+class SendToUserRequest(BaseModel):
+    sender_user_id: str
+    recipient_user_id: str
+    amount: float
+    currency: str = "GBP"
+    description: str = ""
+
+
+@router.post("/api/payments/send-to-user")
+async def send_to_user(body: SendToUserRequest):
+    """
+    Send money to another platform user.
+    Records an outgoing transaction for the sender and an incoming one for the recipient.
+    Both appear in each user's platform transaction history.
+    """
+    if body.sender_user_id == body.recipient_user_id:
+        raise HTTPException(status_code=400, detail="Cannot send money to yourself")
+
+    sender = user_storage.get_user(body.sender_user_id)
+    if not sender:
+        raise HTTPException(status_code=404, detail="Sender account not found")
+
+    recipient = user_storage.get_user(body.recipient_user_id)
+    if not recipient:
+        raise HTTPException(status_code=404, detail="Recipient account not found")
+
+    if body.amount <= 0:
+        raise HTTPException(status_code=400, detail="Amount must be greater than zero")
+
+    description = body.description.strip() if body.description else ""
+
+    transaction_storage.record_transaction(
+        user_id=body.sender_user_id,
+        transaction_type="SENT",
+        amount=body.amount,
+        currency=body.currency,
+        from_account_id=body.sender_user_id,
+        to_account_id=body.recipient_user_id,
+        description=description or f"Sent to {recipient['name']}",
+        status="COMPLETED",
+    )
+
+    transaction_storage.record_transaction(
+        user_id=body.recipient_user_id,
+        transaction_type="RECEIVED",
+        amount=body.amount,
+        currency=body.currency,
+        from_account_id=body.sender_user_id,
+        to_account_id=body.recipient_user_id,
+        description=description or f"Received from {sender['name']}",
+        status="COMPLETED",
+    )
+
+    return {
+        "success": True,
+        "message": f"Sent {body.currency} {body.amount:.2f} to {recipient['name']}",
+        "sender": sender["name"],
+        "recipient": recipient["name"],
+        "amount": body.amount,
+        "currency": body.currency,
+    }
+
+
+@router.get("/api/payments/platform-history")
+async def platform_history(user_id: str = Query(...), limit: int = Query(50, ge=1, le=500)):
+    """
+    Returns platform transaction history (sent/received) for a user.
+    No session auth required — intended for the onboarding dashboard.
+    """
+    user = user_storage.get_user(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail="User not found")
+
+    transactions = transaction_storage.get_user_transactions(user_id, limit=limit)
+    return {"transactions": transactions, "count": len(transactions)}

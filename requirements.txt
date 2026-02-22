@@ -9,3 +9,4 @@ twilio
 pydantic
 pydantic[email]
 httpx
+google-genai

@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Alma Banking</title>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #f1f5f9;
+      --card:        #ffffff;
+      --primary:     #2563eb;
+      --primary-dk:  #1d4ed8;
+      --success:     #16a34a;
+      --success-bg:  #dcfce7;
+      --danger:      #dc2626;
+      --danger-bg:   #fee2e2;
+      --text:        #0f172a;
+      --muted:       #64748b;
+      --border:      #e2e8f0;
+      --shadow:      0 4px 12px rgba(0,0,0,0.08);
+      --radius:      14px;
+      --radius-sm:   8px;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      min-height: 100vh;
+      font-size: 15px;
+      line-height: 1.5;
+    }
+
+    /* ── Layout ── */
+    .screen { display: none; }
+    .screen.active { display: block; }
+
+    .page-wrap {
+      max-width: 480px;
+      margin: 0 auto;
+      padding: 24px 16px 48px;
+    }
+
+    /* ── Logo header (onboarding screens) ── */
+    .logo-header {
+      text-align: center;
+      padding: 40px 0 32px;
+    }
+    .logo-header .wordmark {
+      font-size: 32px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      color: var(--primary);
+    }
+    .logo-header .tagline {
+      color: var(--muted);
+      font-size: 14px;
+      margin-top: 4px;
+    }
+
+    /* ── Cards ── */
+    .card {
+      background: var(--card);
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      box-shadow: var(--shadow);
+    }
+    .card + .card { margin-top: 16px; }
+    .card h2 { font-size: 20px; font-weight: 700; margin-bottom: 6px; }
+    .card h3 { font-size: 17px; font-weight: 600; margin-bottom: 4px; }
+    .card .subtitle {
+      color: var(--muted);
+      font-size: 14px;
+      margin-bottom: 20px;
+    }
+
+    /* ── Step dots ── */
+    .steps {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 0;
+      margin-bottom: 28px;
+    }
+    .step-dot {
+      width: 28px; height: 28px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 12px; font-weight: 700;
+      background: var(--border);
+      color: var(--muted);
+      flex-shrink: 0;
+    }
+    .step-dot.done   { background: var(--success); color: #fff; }
+    .step-dot.active { background: var(--primary); color: #fff; }
+    .step-line { flex: 1; height: 2px; background: var(--border); max-width: 48px; }
+    .step-line.done  { background: var(--success); }
+
+    /* ── Form ── */
+    .field { margin-bottom: 16px; }
+    .field label {
+      display: block;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 6px;
+    }
+    .field input,
+    .field select {
+      width: 100%;
+      padding: 11px 14px;
+      border: 1.5px solid var(--border);
+      border-radius: var(--radius-sm);
+      font-size: 15px;
+      font-family: inherit;
+      color: var(--text);
+      background: #fff;
+      transition: border-color 0.15s;
+      appearance: none;
+    }
+    .field input:focus,
+    .field select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(37,99,235,0.12);
+    }
+    .field input::placeholder { color: #a0aec0; }
+
+    /* ── Buttons ── */
+    .btn {
+      display: inline-flex; align-items: center; justify-content: center;
+      padding: 12px 20px;
+      border-radius: var(--radius-sm);
+      font-size: 15px; font-weight: 600;
+      font-family: inherit;
+      cursor: pointer;
+      border: none;
+      transition: opacity 0.15s, transform 0.1s;
+      text-decoration: none;
+    }
+    .btn:active { transform: scale(0.98); }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .btn-primary { background: var(--primary); color: #fff; }
+    .btn-primary:hover:not(:disabled) { background: var(--primary-dk); }
+
+    .btn-outline {
+      background: transparent;
+      color: var(--primary);
+      border: 1.5px solid var(--primary);
+    }
+    .btn-outline:hover:not(:disabled) { background: rgba(37,99,235,0.06); }
+
+    .btn-ghost { background: transparent; color: var(--muted); }
+    .btn-ghost:hover:not(:disabled) { background: var(--bg); color: var(--text); }
+
+    .btn-full { width: 100%; }
+    .btn + .btn { margin-top: 10px; }
+
+    /* ── Status messages ── */
+    .status-msg {
+      margin-top: 14px;
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      display: none;
+    }
+    .status-msg.visible { display: block; }
+    .status-msg.success { background: var(--success-bg); color: var(--success); }
+    .status-msg.error   { background: var(--danger-bg);  color: var(--danger);  }
+    .status-msg.info    { background: #eff6ff; color: var(--primary); }
+
+    /* ── Dashboard header ── */
+    .dash-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 16px 16px;
+      max-width: 480px;
+      margin: 0 auto;
+    }
+    .dash-header .greeting { font-size: 22px; font-weight: 700; }
+    .dash-header .greeting span { color: var(--primary); }
+
+    /* ── Balance card ── */
+    .balance-card {
+      background: linear-gradient(135deg, #2563eb 0%, #1e40af 100%);
+      color: #fff;
+      border-radius: var(--radius);
+      padding: 28px 24px;
+      margin-bottom: 20px;
+      box-shadow: 0 8px 24px rgba(37,99,235,0.3);
+    }
+    .balance-card .balance-label {
+      font-size: 13px;
+      opacity: 0.8;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .balance-card .balance-amount {
+      font-size: 42px;
+      font-weight: 800;
+      letter-spacing: -1px;
+      margin: 8px 0 4px;
+      min-height: 52px;
+    }
+    .balance-card .balance-account {
+      font-size: 14px;
+      opacity: 0.75;
+    }
+    .balance-card .btn-connect {
+      margin-top: 16px;
+      background: rgba(255,255,255,0.2);
+      color: #fff;
+      border: 1.5px solid rgba(255,255,255,0.4);
+      font-size: 14px;
+      padding: 8px 16px;
+    }
+    .balance-card .btn-connect:hover { background: rgba(255,255,255,0.3); }
+
+    /* ── Tabs ── */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      background: var(--card);
+      border-radius: 10px;
+      padding: 4px;
+      margin-bottom: 16px;
+      box-shadow: var(--shadow);
+    }
+    .tab {
+      flex: 1;
+      padding: 10px 8px;
+      border-radius: 7px;
+      border: none;
+      background: transparent;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--muted);
+      cursor: pointer;
+      font-family: inherit;
+      transition: all 0.15s;
+    }
+    .tab.active {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 2px 6px rgba(37,99,235,0.3);
+    }
+
+    .tab-pane { display: none; }
+    .tab-pane.active { display: block; }
+
+    /* ── Transaction list ── */
+    .txn-list { display: flex; flex-direction: column; gap: 2px; }
+    .txn-item {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 16px;
+      background: var(--card);
+      border-radius: var(--radius-sm);
+      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+    }
+    .txn-icon {
+      width: 38px; height: 38px;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 16px;
+      flex-shrink: 0;
+      font-weight: 700;
+    }
+    .txn-icon.sent     { background: #fee2e2; color: var(--danger); }
+    .txn-icon.received { background: var(--success-bg); color: var(--success); }
+    .txn-icon.bank     { background: #eff6ff; color: var(--primary); }
+
+    .txn-details { flex: 1; min-width: 0; }
+    .txn-desc {
+      font-weight: 500;
+      font-size: 14px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .txn-date { font-size: 12px; color: var(--muted); margin-top: 2px; }
+
+    .txn-amount { font-weight: 700; font-size: 15px; flex-shrink: 0; }
+    .txn-amount.sent     { color: var(--danger); }
+    .txn-amount.received { color: var(--success); }
+    .txn-amount.bank     { color: var(--text); }
+
+    /* ── Empty / loading states ── */
+    .empty-state, .loading-state {
+      text-align: center;
+      padding: 40px 20px;
+      color: var(--muted);
+    }
+    .empty-state .icon { font-size: 36px; margin-bottom: 12px; }
+    .empty-state p { font-size: 15px; font-weight: 500; }
+    .empty-state .hint { font-size: 13px; margin-top: 4px; }
+
+    /* ── Notice box ── */
+    .notice {
+      background: #eff6ff;
+      border: 1.5px solid #bfdbfe;
+      border-radius: var(--radius-sm);
+      padding: 20px;
+      text-align: center;
+    }
+    .notice p { color: var(--muted); font-size: 14px; margin-bottom: 14px; }
+
+    /* ── Bank not-linked badge on balance card ── */
+    .balance-card.no-bank .balance-amount { font-size: 28px; opacity: 0.6; }
+
+    /* ── Divider ── */
+    .divider { height: 1px; background: var(--border); margin: 20px 0; }
+
+    /* ── Responsive ── */
+    @media (max-width: 360px) {
+      .balance-card .balance-amount { font-size: 32px; }
+      .card { padding: 20px 16px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- ═══════════════════════════════════════════════
+     SCREEN 1 — Create Account
+═══════════════════════════════════════════════ -->
+<div id="screen-onboard" class="screen">
+  <div class="page-wrap">
+    <div class="logo-header">
+      <div class="wordmark">Alma</div>
+      <div class="tagline">Banking made simple</div>
+    </div>
+
+    <div class="card">
+      <h2>Create your account</h2>
+      <p class="subtitle">Get started in seconds — no card needed.</p>
+
+      <div class="field">
+        <label>Full Name</label>
+        <input id="f-name" type="text" placeholder="Jane Smith" autocomplete="name">
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input id="f-email" type="email" placeholder="jane@example.com" autocomplete="email">
+      </div>
+      <div class="field">
+        <label>Phone <span style="font-weight:400;text-transform:none">(optional)</span></label>
+        <input id="f-phone" type="tel" placeholder="+44 7911 123456" autocomplete="tel">
+      </div>
+
+      <button id="btn-create" class="btn btn-primary btn-full" onclick="createAccount()">
+        Create Account
+      </button>
+
+      <div id="onboard-status" class="status-msg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SCREEN 2 — Connect Bank (TrueLayer)
+═══════════════════════════════════════════════ -->
+<div id="screen-link-bank" class="screen">
+  <div class="page-wrap">
+    <div class="logo-header">
+      <div class="wordmark">Alma</div>
+    </div>
+
+    <div class="card">
+      <div class="steps">
+        <div class="step-dot done">✓</div>
+        <div class="step-line done"></div>
+        <div class="step-dot active">2</div>
+        <div class="step-line"></div>
+        <div class="step-dot">3</div>
+      </div>
+
+      <h2>Connect your bank</h2>
+      <p class="subtitle">
+        Link your bank account via TrueLayer Open Banking to view your balance and real transactions.
+      </p>
+
+      <!-- Default state: connect button -->
+      <div id="bank-connect-area">
+        <button class="btn btn-primary btn-full" onclick="connectBank()">
+          Connect with TrueLayer
+        </button>
+        <button class="btn btn-ghost btn-full" onclick="skipBankLink()">
+          Skip for now →
+        </button>
+      </div>
+
+      <!-- State: code received from OAuth callback -->
+      <div id="bank-code-area" style="display:none">
+        <div class="status-msg success visible" style="margin-top:0;margin-bottom:16px">
+          Bank authorisation received! Click below to complete.
+        </div>
+        <button id="btn-complete-link" class="btn btn-primary btn-full" onclick="completeBankLink()">
+          Complete bank link
+        </button>
+        <button class="btn btn-ghost btn-full" onclick="skipBankLink()">
+          Skip for now →
+        </button>
+      </div>
+
+      <div id="link-bank-status" class="status-msg"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════
+     SCREEN 3 — Dashboard
+═══════════════════════════════════════════════ -->
+<div id="screen-dashboard" class="screen">
+  <div class="dash-header">
+    <div class="greeting">Hi, <span id="d-name">there</span></div>
+    <button class="btn btn-ghost" style="font-size:13px;padding:8px 12px" onclick="logout()">Sign out</button>
+  </div>
+
+  <div class="page-wrap" style="padding-top:0">
+    <!-- Balance card -->
+    <div class="balance-card" id="balance-card">
+      <div class="balance-label">Available Balance</div>
+      <div class="balance-amount" id="d-balance">—</div>
+      <div class="balance-account" id="d-account-name">Loading…</div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="tabs">
+      <button class="tab active" data-tab="activity" onclick="switchTab('activity')">Activity</button>
+      <button class="tab" data-tab="bank"     onclick="switchTab('bank')">Bank</button>
+      <button class="tab" data-tab="send"     onclick="switchTab('send')">Send</button>
+    </div>
+
+    <!-- Tab: Activity (platform send/receive) -->
+    <div id="tab-activity" class="tab-pane active">
+      <div id="activity-list"></div>
+    </div>
+
+    <!-- Tab: Bank (TrueLayer) -->
+    <div id="tab-bank" class="tab-pane">
+      <div id="bank-pane-content"></div>
+    </div>
+
+    <!-- Tab: Send Money -->
+    <div id="tab-send" class="tab-pane">
+      <div class="card">
+        <h3>Send money</h3>
+        <p class="subtitle">Send to other Alma users instantly</p>
+
+        <div class="field">
+          <label>To</label>
+          <select id="send-recipient">
+            <option value="">Select a user…</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>Amount (GBP)</label>
+          <input id="send-amount" type="number" step="0.01" min="0.01" placeholder="0.00">
+        </div>
+        <div class="field">
+          <label>Note <span style="font-weight:400;text-transform:none">(optional)</span></label>
+          <input id="send-note" type="text" placeholder="What's it for?">
+        </div>
+
+        <button id="btn-send" class="btn btn-primary btn-full" onclick="sendMoney()">
+          Send Money
+        </button>
+        <div id="send-status" class="status-msg"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  // ── State ──────────────────────────────────────────────
+  let currentUser = null;   // { user_id, name, email, stripe_customer_id }
+  let bankToken = null;     // TrueLayer access token
+  let primaryAccountId = null;
+  let pendingAuthCode = null;
+
+  // ── Init ───────────────────────────────────────────────
+  function init() {
+    // Load persisted state
+    try {
+      const stored = localStorage.getItem('alma_user');
+      if (stored) currentUser = JSON.parse(stored);
+      bankToken         = localStorage.getItem('alma_token') || null;
+      primaryAccountId  = localStorage.getItem('alma_account_id') || null;
+    } catch (_) {}
+
+    // Check for OAuth callback code in URL
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if (code) {
+      window.history.replaceState({}, '', '/index.html');
+      pendingAuthCode = code;
+    }
+
+    if (!currentUser) {
+      showScreen('onboard');
+      return;
+    }
+
+    if (pendingAuthCode) {
+      // Came back from TrueLayer — show link-bank screen and auto-complete
+      showScreen('link-bank');
+      showBankCodeArea();
+      return;
+    }
+
+    showDashboard();
+  }
+
+  // ── Screen 1: Create Account ───────────────────────────
+  async function createAccount() {
+    const name  = document.getElementById('f-name').value.trim();
+    const email = document.getElementById('f-email').value.trim();
+    const phone = document.getElementById('f-phone').value.trim();
+
+    if (!name)  return showStatus('onboard-status', 'Please enter your name.', 'error');
+    if (!email || !email.includes('@'))
+                return showStatus('onboard-status', 'Please enter a valid email.', 'error');
+
+    const btn = document.getElementById('btn-create');
+    setBusy(btn, 'Creating account…');
+
+    try {
+      const userId = generateUserId(name);
+
+      // 1. Create Stripe customer first (returns customer_id for the CSV)
+      const stripeRes = await apiFetch('/api/user/create', {
+        method: 'POST',
+        body: { name, email },
+      });
+      const stripeCustomerId = stripeRes.stripe_customer_id;
+
+      // 2. Create TrueLayer / platform user in CSV
+      await apiFetch('/api/truelayer/onboard', {
+        method: 'POST',
+        body: { user_id: userId, name, email, phone, stripe_customer_id: stripeCustomerId },
+      });
+
+      // Persist locally
+      currentUser = { user_id: userId, name, email, stripe_customer_id: stripeCustomerId };
+      localStorage.setItem('alma_user', JSON.stringify(currentUser));
+
+      showScreen('link-bank');
+
+    } catch (err) {
+      showStatus('onboard-status', err.message, 'error');
+    } finally {
+      setBusy(btn, null, 'Create Account');
+    }
+  }
+
+  // ── Screen 2: Link Bank ────────────────────────────────
+  async function connectBank() {
+    try {
+      const data = await apiFetch('/api/truelayer/auth-url');
+      // Redirect in same tab so the callback comes back to this page
+      window.location.href = data.auth_url;
+    } catch (err) {
+      showStatus('link-bank-status', 'Could not get bank auth URL: ' + err.message, 'error');
+    }
+  }
+
+  function showBankCodeArea() {
+    document.getElementById('bank-connect-area').style.display = 'none';
+    document.getElementById('bank-code-area').style.display   = 'block';
+  }
+
+  async function completeBankLink() {
+    if (!pendingAuthCode) return;
+
+    const btn = document.getElementById('btn-complete-link');
+    setBusy(btn, 'Linking bank…');
+
+    try {
+      const data = await apiFetch('/api/truelayer/link-bank', {
+        method: 'POST',
+        body: { user_id: currentUser.user_id, auth_code: pendingAuthCode },
+      });
+
+      bankToken = data.access_token;
+      localStorage.setItem('alma_token', bankToken);
+
+      if (data.accounts && data.accounts.length > 0) {
+        primaryAccountId = data.accounts[0].account_id;
+        localStorage.setItem('alma_account_id', primaryAccountId);
+      }
+
+      pendingAuthCode = null;
+      showStatus('link-bank-status', 'Bank linked! Taking you to your dashboard…', 'success');
+      setTimeout(showDashboard, 1200);
+
+    } catch (err) {
+      showStatus('link-bank-status', 'Failed to link bank: ' + err.message, 'error');
+    } finally {
+      setBusy(btn, null, 'Complete bank link');
+    }
+  }
+
+  function skipBankLink() {
+    pendingAuthCode = null;
+    showDashboard();
+  }
+
+  // ── Screen 3: Dashboard ────────────────────────────────
+  function showDashboard() {
+    showScreen('dashboard');
+    document.getElementById('d-name').textContent = currentUser?.name?.split(' ')[0] || 'there';
+
+    if (bankToken && primaryAccountId) {
+      loadBalance();
+    } else {
+      const card = document.getElementById('balance-card');
+      card.classList.add('no-bank');
+      document.getElementById('d-balance').textContent = '—';
+      document.getElementById('d-account-name').innerHTML =
+        'Bank not connected — <button class="btn-connect btn" onclick="showScreen(\'link-bank\')">Connect now</button>';
+    }
+
+    loadActivity();
+    loadPlatformUsers();
+  }
+
+  async function loadBalance() {
+    if (!bankToken || !primaryAccountId) return;
+    try {
+      const data = await apiFetch(
+        `/api/truelayer/accounts/${primaryAccountId}/balance`,
+        { headers: { Authorization: `Bearer ${bankToken}` } }
+      );
+      const b = (data.results || [])[0];
+      if (b) {
+        document.getElementById('d-balance').textContent     = fmt(b.available, b.currency);
+        document.getElementById('d-account-name').textContent = b.account_id || 'Current Account';
+      }
+    } catch (_) {
+      document.getElementById('d-account-name').textContent = 'Could not load balance';
+    }
+  }
+
+  // ── Tab: Activity ──────────────────────────────────────
+  async function loadActivity() {
+    const el = document.getElementById('activity-list');
+    el.innerHTML = loadingHTML();
+    try {
+      const data = await apiFetch(
+        `/api/payments/platform-history?user_id=${currentUser.user_id}`
+      );
+      const txns = data.transactions || [];
+      if (txns.length === 0) {
+        el.innerHTML = emptyHTML('💸', 'No platform activity yet', 'Send money to get started');
+      } else {
+        el.innerHTML = `<div class="txn-list">${txns.map(renderPlatformTxn).join('')}</div>`;
+      }
+    } catch (err) {
+      el.innerHTML = errorHTML(err.message);
+    }
+  }
+
+  function renderPlatformTxn(t) {
+    const sent    = t.type === 'SENT';
+    const cls     = sent ? 'sent' : 'received';
+    const icon    = sent ? '↑' : '↓';
+    const sign    = sent ? '−' : '+';
+    const amount  = parseFloat(t.amount);
+    return `
+      <div class="txn-item">
+        <div class="txn-icon ${cls}">${icon}</div>
+        <div class="txn-details">
+          <div class="txn-desc">${esc(t.description || t.type)}</div>
+          <div class="txn-date">${ago(t.created_at)}</div>
+        </div>
+        <div class="txn-amount ${cls}">${sign}£${amount.toFixed(2)}</div>
+      </div>`;
+  }
+
+  // ── Tab: Bank (TrueLayer) ──────────────────────────────
+  async function loadBankTab() {
+    const el = document.getElementById('bank-pane-content');
+    if (!bankToken || !primaryAccountId) {
+      el.innerHTML = `
+        <div class="notice">
+          <p>Connect your bank account to view your balance and real transaction history.</p>
+          <button class="btn btn-primary" onclick="showScreen('link-bank')">Connect Bank</button>
+        </div>`;
+      return;
+    }
+
+    el.innerHTML = loadingHTML();
+    try {
+      const data = await apiFetch(
+        `/api/truelayer/accounts/${primaryAccountId}/transactions?limit=30`,
+        { headers: { Authorization: `Bearer ${bankToken}` } }
+      );
+      const txns = data.results || [];
+      if (txns.length === 0) {
+        el.innerHTML = emptyHTML('🏦', 'No bank transactions found', 'Your recent activity will appear here');
+      } else {
+        el.innerHTML = `<div class="txn-list">${txns.map(renderBankTxn).join('')}</div>`;
+      }
+    } catch (err) {
+      el.innerHTML = errorHTML(err.message);
+    }
+  }
+
+  function renderBankTxn(t) {
+    const amount = parseFloat(t.amount);
+    const credit = amount >= 0;
+    const cls    = credit ? 'received' : 'sent';
+    const sign   = credit ? '+' : '−';
+    const desc   = t.description || t.merchant_name || t.transaction_category || 'Transaction';
+    const date   = t.timestamp || t.settled_date || t.date || '';
+    return `
+      <div class="txn-item">
+        <div class="txn-icon bank">🏦</div>
+        <div class="txn-details">
+          <div class="txn-desc">${esc(desc)}</div>
+          <div class="txn-date">${ago(date)}</div>
+        </div>
+        <div class="txn-amount ${cls}">${sign}£${Math.abs(amount).toFixed(2)}</div>
+      </div>`;
+  }
+
+  // ── Tab: Send Money ────────────────────────────────────
+  async function loadPlatformUsers() {
+    const sel = document.getElementById('send-recipient');
+    sel.innerHTML = '<option value="">Loading users…</option>';
+    try {
+      const data = await apiFetch('/api/truelayer/users');
+      const others = (data.users || []).filter(u => u.user_id !== currentUser?.user_id);
+      if (others.length === 0) {
+        sel.innerHTML = '<option value="">No other users on the platform yet</option>';
+      } else {
+        sel.innerHTML = '<option value="">Select a user…</option>' +
+          others.map(u =>
+            `<option value="${esc(u.user_id)}">${esc(u.name)} — ${esc(u.email)}</option>`
+          ).join('');
+      }
+    } catch (_) {
+      sel.innerHTML = '<option value="">Could not load users</option>';
+    }
+  }
+
+  async function sendMoney() {
+    const recipientId = document.getElementById('send-recipient').value;
+    const amountRaw   = document.getElementById('send-amount').value;
+    const note        = document.getElementById('send-note').value.trim();
+
+    if (!recipientId) return showStatus('send-status', 'Please select a recipient.', 'error');
+
+    const amount = parseFloat(amountRaw);
+    if (!amount || amount <= 0) return showStatus('send-status', 'Please enter a valid amount.', 'error');
+
+    const btn = document.getElementById('btn-send');
+    setBusy(btn, 'Sending…');
+
+    try {
+      const data = await apiFetch('/api/payments/send-to-user', {
+        method: 'POST',
+        body: {
+          sender_user_id: currentUser.user_id,
+          recipient_user_id: recipientId,
+          amount,
+          currency: 'GBP',
+          description: note,
+        },
+      });
+
+      showStatus('send-status', `✓ Sent £${amount.toFixed(2)} to ${data.recipient}`, 'success');
+      document.getElementById('send-amount').value = '';
+      document.getElementById('send-note').value   = '';
+      document.getElementById('send-recipient').value = '';
+
+      // Refresh activity feed
+      loadActivity();
+
+    } catch (err) {
+      showStatus('send-status', err.message, 'error');
+    } finally {
+      setBusy(btn, null, 'Send Money');
+    }
+  }
+
+  // ── Tab switching ──────────────────────────────────────
+  function switchTab(name) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.toggle('active', t.dataset.tab === name));
+    document.querySelectorAll('.tab-pane').forEach(p => p.classList.toggle('active', p.id === `tab-${name}`));
+    if (name === 'bank')   loadBankTab();
+    if (name === 'send')   loadPlatformUsers();
+    if (name === 'activity') loadActivity();
+  }
+
+  // ── Logout ─────────────────────────────────────────────
+  async function logout() {
+    try { await apiFetch('/api/user/logout', { method: 'POST' }); } catch (_) {}
+    localStorage.removeItem('alma_user');
+    localStorage.removeItem('alma_token');
+    localStorage.removeItem('alma_account_id');
+    currentUser = null; bankToken = null; primaryAccountId = null;
+    showScreen('onboard');
+    // Reset form
+    ['f-name', 'f-email', 'f-phone'].forEach(id => {
+      document.getElementById(id).value = '';
+    });
+    clearStatus('onboard-status');
+  }
+
+  // ── Helpers ────────────────────────────────────────────
+  function showScreen(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    document.getElementById(`screen-${name}`).classList.add('active');
+    // Reset link-bank screen state when showing it
+    if (name === 'link-bank') {
+      if (pendingAuthCode) {
+        showBankCodeArea();
+      } else {
+        document.getElementById('bank-connect-area').style.display = 'block';
+        document.getElementById('bank-code-area').style.display   = 'none';
+      }
+      clearStatus('link-bank-status');
+    }
+  }
+
+  function showStatus(id, msg, type) {
+    const el = document.getElementById(id);
+    el.textContent = msg;
+    el.className = `status-msg ${type} visible`;
+  }
+  function clearStatus(id) {
+    const el = document.getElementById(id);
+    el.textContent = '';
+    el.className = 'status-msg';
+  }
+
+  function setBusy(btn, busyText, idleText) {
+    if (busyText !== null) {
+      btn.disabled    = true;
+      btn.dataset.idle = btn.textContent;
+      btn.textContent  = busyText;
+    } else {
+      btn.disabled    = false;
+      btn.textContent  = idleText || btn.dataset.idle || 'Submit';
+    }
+  }
+
+  function generateUserId(name) {
+    const base   = name.toLowerCase().replace(/[^a-z0-9]/g, '_').replace(/_+/g, '_').replace(/^_|_$/g, '');
+    const suffix = Date.now().toString(36).slice(-5);
+    return `${base}_${suffix}`;
+  }
+
+  function fmt(amount, currency = 'GBP') {
+    const sym = { GBP: '£', EUR: '€', USD: '$' }[currency] || `${currency} `;
+    return `${sym}${parseFloat(amount).toFixed(2)}`;
+  }
+
+  function ago(dateStr) {
+    if (!dateStr) return '';
+    const d    = new Date(dateStr);
+    const diff = Date.now() - d;
+    if (diff < 60_000)    return 'Just now';
+    if (diff < 3_600_000) return `${Math.floor(diff / 60_000)}m ago`;
+    if (diff < 86_400_000) return `${Math.floor(diff / 3_600_000)}h ago`;
+    if (diff < 604_800_000) return `${Math.floor(diff / 86_400_000)}d ago`;
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' });
+  }
+
+  function esc(str) {
+    const d = document.createElement('div');
+    d.textContent = str || '';
+    return d.innerHTML;
+  }
+
+  async function apiFetch(url, opts = {}) {
+    const res = await fetch(url, {
+      credentials: 'include',
+      headers: { 'Content-Type': 'application/json', ...(opts.headers || {}) },
+      method: opts.method || 'GET',
+      body: opts.body ? JSON.stringify(opts.body) : undefined,
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.detail || `Request failed (${res.status})`);
+    return data;
+  }
+
+  function loadingHTML() {
+    return '<div class="loading-state">Loading…</div>';
+  }
+  function emptyHTML(icon, title, hint) {
+    return `<div class="empty-state"><div class="icon">${icon}</div><p>${title}</p><p class="hint">${hint}</p></div>`;
+  }
+  function errorHTML(msg) {
+    return `<div class="empty-state"><div class="icon">⚠️</div><p>${esc(msg)}</p></div>`;
+  }
+
+  // Boot
+  document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>

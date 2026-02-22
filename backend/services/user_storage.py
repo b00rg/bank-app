@@ -10,6 +10,7 @@ CSV_HEADERS = [
     "name",
     "email",
     "phone",
+    "stripe_customer_id",
     "access_token",
     "token_type",
     "expires_in",
@@ -24,7 +25,7 @@ def _ensure_csv_exists():
     """Create CSV file if it doesn't exist."""
     if not os.path.exists(USERS_CSV):
         with open(USERS_CSV, 'w', newline='') as f:
-            writer = csv.DictWriter(f, fieldnames=CSV_HEADERS)
+            writer = csv.DictWriter(f, fieldnames=CSV_HEADERS, restval="")
             writer.writeheader()
 
 
@@ -33,6 +34,7 @@ def save_user(
     name: str,
     email: str,
     phone: str = "",
+    stripe_customer_id: str = "",
     access_token: str = "",
     token_type: str = "",
     expires_in: int = 0,
@@ -64,6 +66,7 @@ def save_user(
         "name": name,
         "email": email,
         "phone": phone,
+        "stripe_customer_id": stripe_customer_id,
         "access_token": access_token,
         "token_type": token_type,
         "expires_in": expires_in,
@@ -97,7 +100,7 @@ def save_user(
     
     # Write back to CSV
     with open(USERS_CSV, 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=CSV_HEADERS)
+        writer = csv.DictWriter(f, fieldnames=CSV_HEADERS, restval="")
         writer.writeheader()
         writer.writerows(users)
     
@@ -168,7 +171,7 @@ def delete_user(user_id: str) -> bool:
     
     # Write back to CSV
     with open(USERS_CSV, 'w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=CSV_HEADERS)
+        writer = csv.DictWriter(f, fieldnames=CSV_HEADERS, restval="")
         writer.writeheader()
         writer.writerows(users)
     

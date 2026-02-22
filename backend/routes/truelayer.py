@@ -1,8 +1,11 @@
-from fastapi import APIRouter, HTTPException, Query, Header
+
+from fastapi import APIRouter, HTTPException, Query, Header, Request
+
+from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
-from backend.services import truelayer
-from backend.services import user_storage
-from backend.services import transaction_storage
+from services import truelayer
+from services import user_storage
+from services import transaction_storage
 
 router = APIRouter(prefix="/api/truelayer", tags=["TrueLayer"])
 
@@ -13,6 +16,7 @@ class OnboardUserRequest(BaseModel):
     name: str
     email: str
     phone: str = ""
+    stripe_customer_id: str = ""
 
 
 class LinkBankRequest(BaseModel):
@@ -92,7 +96,8 @@ async def onboard_user(request: OnboardUserRequest):
         user_id=request.user_id,
         name=request.name,
         email=request.email,
-        phone=request.phone
+        phone=request.phone,
+        stripe_customer_id=request.stripe_customer_id
     )
     
     return {
@@ -204,28 +209,36 @@ async def get_user_profile(user_id: str):
 
 
 @router.get("/accounts")
-async def get_accounts(authorization: str = Header(None)):
+async def get_accounts(request: Request):
     """
     Fetch all linked bank accounts.
-    Uses access token from Authorization header (Bearer token).
+    Can use Authorization header or session access token.
     
     Returns:
         list of accounts with account_id, name, type, currency
     """
-    # Extract token from Authorization header
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    # Try to get token from Authorization header first, then from session
+    auth_header = request.headers.get("Authorization", "")
+    token = None
     
-    token = authorization.replace("Bearer ", "")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.replace("Bearer ", "")
+    else:
+        # Try to get from session
+        token = request.session.get("truelayer_access_token")
+    
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing authorization token")
+    
     accounts = truelayer.get_accounts(access_token=token)
     return accounts
 
 
 @router.get("/accounts/{account_id}/transactions")
-async def get_transactions(account_id: str, limit: int = Query(20, ge=1, le=100), authorization: str = Header(None)):
+async def get_transactions(account_id: str, request: Request, limit: int = Query(20, ge=1, le=100)):
     """
     Fetch transactions for a specific account.
-    Uses access token from Authorization header (Bearer token).
+    Can use Authorization header or session access token.
     
     Args:
         account_id: The account ID
@@ -234,20 +247,28 @@ async def get_transactions(account_id: str, limit: int = Query(20, ge=1, le=100)
     Returns:
         list of transactions with amount, date, description, status
     """
-    # Extract token from Authorization header
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    # Try to get token from Authorization header first, then from session
+    auth_header = request.headers.get("Authorization", "")
+    token = None
     
-    token = authorization.replace("Bearer ", "")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.replace("Bearer ", "")
+    else:
+        # Try to get from session
+        token = request.session.get("truelayer_access_token")
+    
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing authorization token")
+    
     transactions = truelayer.get_transactions(account_id, access_token=token)
     return transactions
 
 
 @router.get("/accounts/{account_id}/balance")
-async def get_balance(account_id: str, authorization: str = Header(None)):
+async def get_balance(account_id: str, request: Request):
     """
     Fetch balance for a specific account.
-    Uses access token from Authorization header (Bearer token).
+    Can use Authorization header or session access token.
     
     Args:
         account_id: The account ID
@@ -255,11 +276,19 @@ async def get_balance(account_id: str, authorization: str = Header(None)):
     Returns:
         dict with available and current balance
     """
-    # Extract token from Authorization header
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="Missing or invalid Authorization header")
+    # Try to get token from Authorization header first, then from session
+    auth_header = request.headers.get("Authorization", "")
+    token = None
     
-    token = authorization.replace("Bearer ", "")
+    if auth_header and auth_header.startswith("Bearer "):
+        token = auth_header.replace("Bearer ", "")
+    else:
+        # Try to get from session
+        token = request.session.get("truelayer_access_token")
+    
+    if not token:
+        raise HTTPException(status_code=401, detail="Missing authorization token")
+    
     balance = truelayer.get_balance(account_id, access_token=token)
     return balance
 
@@ -420,23 +449,24 @@ async def get_user_transactions(user_id: str = Query(...), limit: int = Query(50
     }
 
 
+@router.get("/platform-history")
+async def get_platform_history(user_id: str = Query(...), limit: int = Query(50, ge=1, le=500)):
+    """
+    Get platform transaction history (sent/received between app users).
+    No TrueLayer auth required — used for the internal transfer feed.
+    """
+    user = user_storage.get_user(user_id)
+    if not user:
+        raise HTTPException(status_code=404, detail=f"User {user_id} not found")
+
+    transactions = transaction_storage.get_user_transactions(user_id, limit=limit)
+    return {"user_id": user_id, "transactions": transactions, "count": len(transactions)}
+
+
 @router.get("/callback")
-async def oauth_callback(code: str = Query(...), state: str = Query(None)):
+async def oauth_callback(code: str = Query(...)):
     """
     OAuth callback endpoint from TrueLayer.
-    User is redirected here after approving bank access.
-    Frontend should capture the code and call /link-bank.
-    
-    Args:
-        code: Authorization code from TrueLayer
-        state: State parameter for security (optional)
-    
-    Returns:
-        dict: Message with code for frontend
+    Redirects back to the frontend with the auth code as a URL parameter.
     """
-    return {
-        "message": "Authorization successful. Authorization code received.",
-        "code": code,
-        "state": state,
-        "next_step": "POST to /api/truelayer/link-bank with user_id and code"
-    }
+    return RedirectResponse(url=f"/index.html?code={code}")

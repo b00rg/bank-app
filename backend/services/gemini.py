@@ -8,28 +8,9 @@ from typing import Any
 
 from google import genai
 
-
-# ---------------------------------------------------------------------------
-# Valid intents
-# ---------------------------------------------------------------------------
-
 VALID_INTENTS = {"CHECK_BALANCE", "TRANSFER_DRAFT", "CONFIRM", "CANCEL", "CLARIFY", "HELP"}
 
-# Each intent is a plain dict with at minimum {"intent": <one of VALID_INTENTS>, "assistant_say": str}
-# Shapes per intent:
-#
-#   CHECK_BALANCE  → { intent, assistant_say }
-#   TRANSFER_DRAFT → { intent, assistant_say, payee_label, amount, currency }
-#   CONFIRM        → { intent, assistant_say }
-#   CANCEL         → { intent, assistant_say }
-#   CLARIFY        → { intent, assistant_say, choices: list[str] | null }
-#   HELP           → { intent, assistant_say }
-
 Intent = dict[str, Any]
-
-# ---------------------------------------------------------------------------
-# Settings
-# ---------------------------------------------------------------------------
 
 JSON_RE = re.compile(r"\{.*\}", re.DOTALL)
 
@@ -43,10 +24,6 @@ class Settings:
 def get_settings() -> Settings:
     return Settings()
 
-
-# ---------------------------------------------------------------------------
-# Client
-# ---------------------------------------------------------------------------
 
 class GeminiIntentClient:
     def __init__(self) -> None:
@@ -64,7 +41,6 @@ class GeminiIntentClient:
         pending_transfer: dict | None,
     ) -> tuple[Intent, dict[str, Any] | None]:
         prompt = self._build_prompt(transcript, payees_allowed, pending_transfer)
-
         raw_text, model_used = self._generate_with_fallback(prompt)
         parsed = self._extract_and_validate(raw_text)
         if parsed is not None:
@@ -111,7 +87,7 @@ class GeminiIntentClient:
             "HELP": {"intent": "HELP", "assistant_say": "string"},
         }
         return (
-            "You are an intent classifier for a banking voice assistant.\n"
+            "You are an intent classifier for a banking voice assistant called Alma.\n"
             "Return ONLY JSON. No markdown, no explanation.\n"
             "Valid intents and shape:\n"
             f"{json.dumps(schema_description)}\n"
@@ -124,11 +100,17 @@ class GeminiIntentClient:
 
     def _generate_with_fallback(self, prompt: str) -> tuple[str, str]:
         try:
-            resp = self.client.models.generate_content(model=self.primary_model, contents=prompt)
+            resp = self.client.models.generate_content(
+                model=self.primary_model,
+                contents=prompt,
+            )
             return (resp.text or ""), self.primary_model
         except Exception:
             try:
-                resp = self.client.models.generate_content(model=self.fallback_model, contents=prompt)
+                resp = self.client.models.generate_content(
+                    model=self.fallback_model,
+                    contents=prompt,
+                )
                 return (resp.text or ""), self.fallback_model
             except Exception as e:
                 raise RuntimeError(f"Both primary and fallback models failed: {e}") from e
