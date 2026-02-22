@@ -4,7 +4,7 @@ from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
-from services.payments import process_payment, list_payee_labels
+from routes.payments import process_payment, list_payee_labels
 from services.alerts import (
     send_carer_sms,
     build_fraud_alert_message,
