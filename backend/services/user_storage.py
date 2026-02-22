@@ -11,7 +11,13 @@ CSV_HEADERS = [
     "email",
     "phone",
     "stripe_customer_id",
+    "cardholder_id",
+    "password_hash",
+    "overseer_name",
+    "overseer_number",
+    "overseer_password_hash",
     "access_token",
+    "refresh_token",
     "token_type",
     "expires_in",
     "primary_account_id",
@@ -29,13 +35,32 @@ def _ensure_csv_exists():
             writer.writeheader()
 
 
+def get_user_by_email(email: str) -> Optional[Dict]:
+    """Retrieve user data from CSV by email address."""
+    _ensure_csv_exists()
+
+    if os.path.exists(USERS_CSV):
+        with open(USERS_CSV, 'r', newline='') as f:
+            reader = csv.DictReader(f)
+            for row in reader:
+                if row.get("email", "").lower() == email.lower():
+                    return row
+    return None
+
+
 def save_user(
     user_id: str,
     name: str,
     email: str,
     phone: str = "",
     stripe_customer_id: str = "",
+    cardholder_id: str = "",
+    password_hash: str = "",
+    overseer_name: str = "",
+    overseer_number: str = "",
+    overseer_password_hash: str = "",
     access_token: str = "",
+    refresh_token: str = "",
     token_type: str = "",
     expires_in: int = 0,
     primary_account_id: str = "",
@@ -67,7 +92,13 @@ def save_user(
         "email": email,
         "phone": phone,
         "stripe_customer_id": stripe_customer_id,
+        "cardholder_id": cardholder_id,
+        "password_hash": password_hash,
+        "overseer_name": overseer_name,
+        "overseer_number": overseer_number,
+        "overseer_password_hash": overseer_password_hash,
         "access_token": access_token,
+        "refresh_token": refresh_token,
         "token_type": token_type,
         "expires_in": expires_in,
         "primary_account_id": primary_account_id,

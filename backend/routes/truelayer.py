@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, HTTPException, Query, Header
 from fastapi.responses import RedirectResponse
 from pydantic import BaseModel
@@ -117,8 +118,7 @@ async def get_auth_url():
     """
     auth_url = truelayer.get_authorization_url()
     return {
-        "auth_url": auth_url,
-        "message": "Redirect user to this URL to authorize bank access"
+        "auth_url": auth_url
     }
 
 
@@ -154,13 +154,20 @@ async def link_bank(request: LinkBankRequest):
     primary_account_id = accounts[0]["account_id"] if accounts else ""
     primary_account_name = accounts[0].get("display_name", "") if accounts else ""
     
-    # Update user with token and account info
+    # Update user with token and account info (preserve existing fields)
     user_storage.save_user(
         user_id=request.user_id,
         name=user.get("name", ""),
         email=user.get("email", ""),
         phone=user.get("phone", ""),
+        stripe_customer_id=user.get("stripe_customer_id", ""),
+        cardholder_id=user.get("cardholder_id", ""),
+        password_hash=user.get("password_hash", ""),
+        overseer_name=user.get("overseer_name", ""),
+        overseer_number=user.get("overseer_number", ""),
+        overseer_password_hash=user.get("overseer_password_hash", ""),
         access_token=result.get("access_token", ""),
+        refresh_token=result.get("refresh_token", ""),
         token_type=result.get("token_type", "Bearer"),
         expires_in=result.get("expires_in", 0),
         primary_account_id=primary_account_id,
@@ -438,9 +445,14 @@ async def get_platform_history(user_id: str = Query(...), limit: int = Query(50,
 
 
 @router.get("/callback")
-async def oauth_callback(code: str = Query(...)):
+async def oauth_callback(code: str = Query(...), state: str = Query(None)):
     """
     OAuth callback endpoint from TrueLayer.
-    Redirects back to the frontend with the auth code as a URL parameter.
+    Redirects back to the frontend /link-bank page with the auth code.
+    Set FRONTEND_URL env var for dev (e.g. http://localhost:8080).
     """
-    return RedirectResponse(url=f"/index.html?code={code}")
+    frontend_url = os.getenv("FRONTEND_URL", "")
+    redirect_url = f"{frontend_url}/link-bank?code={code}"
+    if state:
+        redirect_url += f"&state={state}"
+    return RedirectResponse(url=redirect_url)

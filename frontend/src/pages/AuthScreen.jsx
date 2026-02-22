@@ -21,11 +21,22 @@ const AuthScreen = () => {
 
     try {
       if (isSignup) {
-        await apiClient.auth.signup(name, email, password, overseerName, overseerNumber, overseerPassword);
+        const userId = "whyyyyyyyyyyyyyyyyyyyyyy"
+        localStorage.setItem("user_id", userId);
+        localStorage.setItem("user_name", name);
+        localStorage.setItem("user_email", email);
+        try {
+          await apiClient.auth.signup(userId, name, email);
+        } catch (err) {
+          // Ignore "already exists" — user is already registered, proceed to link bank
+          if (!err.message?.includes("already exists")) throw err;
+        }
+        navigate("/link-bank");
       } else {
-        await apiClient.auth.login(email, password);
+        const data = await apiClient.auth.login(email, password);
+        if (data.user_id) localStorage.setItem("user_id", data.user_id);
+        navigate(data.bank_linked ? "/dashboard" : "/link-bank");
       }
-      navigate("/dashboard");
     } catch (err) {
       setError(err.message);
     } finally {
