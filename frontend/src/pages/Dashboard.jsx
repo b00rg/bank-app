@@ -68,7 +68,7 @@ const Dashboard = () => {
       <div className="flex-1 overflow-y-auto px-6 pb-4">
         <div className="pt-6 pb-2 fade-in">
           <p className="text-sm text-muted-foreground">Welcome back,</p>
-          <h1 className="text-balance text-foreground">Alma.</h1>
+          <h1 className="text-balance text-foreground mb-2">Alma.</h1>
         </div>
 
         <p className="text-body text-muted-foreground mb-6 slide-up">

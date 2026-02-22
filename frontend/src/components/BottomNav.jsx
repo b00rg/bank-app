@@ -1,7 +1,7 @@
 import React, { useState, useCallback, useRef, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Home, CreditCard, HelpCircle, Mic } from "lucide-react";
-import VoiceOverlay from "./VoiceOverlay"; // Import the component we just made
+import VoiceOverlay from "./VoiceOverlay";
 
 const tabs = [
   { label: "Home", icon: Home, path: "/dashboard" },
@@ -12,62 +12,78 @@ const tabs = [
 const BottomNav = () => {
   const navigate = useNavigate();
   const location = useLocation();
-  
-  // State: 'idle', 'listening', 'processing'
-  const [voiceState, setVoiceState] = useState("idle");
+
+  const [voiceState, setVoiceState] = useState("idle"); // 'idle' | 'listening' | 'processing' | 'success'
+  const [voiceResult, setVoiceResult] = useState(null);
   const timeoutRef = useRef(null);
 
-  // Start Listening
   const handleMicDown = useCallback((e) => {
-    // Prevent default touch actions (scrolling, etc) while holding
-    if(e.cancelable) e.preventDefault();
+    if (e.cancelable) e.preventDefault();
     setVoiceState("listening");
   }, []);
 
-  // Stop Listening & Start Processing
   const handleMicUp = useCallback(() => {
-    if (voiceState === "listening") {
-      setVoiceState("processing");
+    if (voiceState !== "listening") return;
+    setVoiceState("processing");
 
-      // Simulate API call delay (2 seconds)
+    // Simulate backend call
+    timeoutRef.current = setTimeout(async () => {
+      // Mock backend response
+      const mockResponse = {
+        intent: "TRANSFER_DRAFT",
+        amount: "20.00",
+        currency: "EUR",
+        payee_label: "Anna",
+        assistant_say: "Transfer of €20.00 to Anna drafted!",
+        summary: {
+          from: "Account 1",
+          to: "Anna",
+          amount: "20.00",
+          currency: "EUR",
+          status: "Pending",
+        },
+      };
+
+      setVoiceResult(mockResponse);
+      setVoiceState("success");
+
+      // Auto-dismiss after 3 seconds and navigate
       timeoutRef.current = setTimeout(() => {
         setVoiceState("idle");
-        // Optional: Navigate or show a toast here after "success"
-      }, 2500);
-    }
-  }, [voiceState]);
+        setVoiceResult(null);
+        navigate("/dashboard", {
+          state: {
+            amount: mockResponse.amount,
+            currency: mockResponse.currency,
+            payee: mockResponse.payee_label,
+            summary: mockResponse.summary,
+          },
+        });
+      }, 5000);
+    }, 10000);
+  }, [voiceState, navigate]);
 
-  // Clean up timeout if component unmounts
   useEffect(() => {
     return () => {
       if (timeoutRef.current) clearTimeout(timeoutRef.current);
     };
   }, []);
 
-  // Global event listener to catch 'pointerup' even if finger drags off button
   useEffect(() => {
     const handleGlobalUp = () => {
-      if (voiceState === "listening") {
-        handleMicUp();
-      }
+      if (voiceState === "listening") handleMicUp();
     };
-
-    window.addEventListener('pointerup', handleGlobalUp);
-    window.addEventListener('touchend', handleGlobalUp);
+    window.addEventListener("pointerup", handleGlobalUp);
+    window.addEventListener("touchend", handleGlobalUp);
     return () => {
-      window.removeEventListener('pointerup', handleGlobalUp);
-      window.removeEventListener('touchend', handleGlobalUp);
+      window.removeEventListener("pointerup", handleGlobalUp);
+      window.removeEventListener("touchend", handleGlobalUp);
     };
   }, [voiceState, handleMicUp]);
 
   return (
     <>
-      {/* 
-        The Overlay sits outside the nav structure conceptually, 
-        but inside the component so it shares state.
-        We use fixed positioning in the Overlay CSS to cover the phone screen.
-      */}
-      <VoiceOverlay currentState={voiceState} />
+      <VoiceOverlay currentState={voiceState} result={voiceResult} />
 
       <nav
         className="flex items-center justify-around bg-secondary px-2 py-2 gap-1 relative z-40"
@@ -99,24 +115,22 @@ const BottomNav = () => {
           );
         })}
 
-        {/* Voice Command Button */}
         <div className="relative flex flex-col items-center gap-1 min-w-[56px] min-h-[48px]">
           <button
             type="button"
             aria-label="Hold for voice command"
             onPointerDown={handleMicDown}
-            // Note: onPointerUp is handled by window listener for better UX
             className={`relative flex flex-col items-center justify-center min-w-[44px] min-h-[44px] rounded-full transition-all duration-300 select-none touch-none ${
-              voiceState !== 'idle'
-                ? "bg-primary text-primary-foreground scale-90 opacity-0" // Hide visually when overlay takes over
+              voiceState !== "idle"
+                ? "bg-primary text-primary-foreground scale-90 opacity-0 pointer-events-none"
                 : "bg-secondary-foreground/15 text-secondary-foreground hover:bg-secondary-foreground/25"
             }`}
           >
             <Mic size={22} strokeWidth={2.5} />
           </button>
-          <span 
+          <span
             className={`text-[10px] font-semibold text-secondary-foreground/70 transition-opacity ${
-              voiceState !== 'idle' ? 'opacity-0' : 'opacity-100'
+              voiceState !== "idle" ? "opacity-0" : "opacity-100"
             }`}
           >
             Voice
