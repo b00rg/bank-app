@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Alma Test Frontend</title>
+  <style>
+    body { font-family: Arial, sans-serif; margin: 20px; }
+    section { margin-bottom: 30px; }
+    input { margin: 5px; padding: 5px; }
+    button { padding: 5px 10px; }
+    pre { background: #f4f4f4; padding: 10px; border-radius: 5px; }
+  </style>
+</head>
+<body>
+  <h1>Alma API Test Frontend</h1>
+
+  <!-- Create User -->
+  <section>
+    <h2>Create User</h2>
+    <input type="text" id="userName" placeholder="Your Name">
+    <input type="email" id="userEmail" placeholder="Your Email">
+    <button onclick="createUser()">Create User</button>
+    <pre id="userMessage"></pre>
+  </section>
+
+  <!-- Register Carer -->
+  <section>
+    <h2>Register Carer</h2>
+    <input type="text" id="carerName" placeholder="Carer Name">
+    <input type="text" id="carerPhone" placeholder="+353871234567">
+    <button onclick="registerCarer()">Register Carer</button>
+    <pre id="carerMessage"></pre>
+  </section>
+
+  <!-- Create Payment -->
+  <section>
+    <h2>Create Payment</h2>
+    <input type="number" id="paymentAmount" placeholder="Amount (€)">
+    <input type="text" id="paymentDesc" placeholder="Description">
+    <button onclick="createPayment()">Pay</button>
+    <pre id="paymentMessage"></pre>
+  </section>
+
+  <!-- Card Info -->
+  <section>
+    <h2>Card Info</h2>
+    <button onclick="getCardInfo()">Refresh Card Info</button>
+    <pre id="cardInfo"></pre>
+  </section>
+
+  <!-- Transactions -->
+  <section>
+    <h2>Recent Transactions</h2>
+    <button onclick="getTransactions()">Refresh Transactions</button>
+    <pre id="transactions"></pre>
+  </section>
+
+    <!-- Create Card -->
+  <section>
+    <h2>Create Virtual Card</h2>
+    <button onclick="createCard()">Create Card</button>
+    <pre id="createCardMessage"></pre>
+  </section>
+
+  <script>
+    async function createUser() {
+      const name = document.getElementById("userName").value;
+      const email = document.getElementById("userEmail").value;
+      const res = await fetch("/api/user/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email })
+      });
+      const data = await res.json();
+      document.getElementById("userMessage").innerText = JSON.stringify(data, null, 2);
+    }
+
+    async function registerCarer() {
+      const carer_name = document.getElementById("carerName").value;
+      const carer_phone = document.getElementById("carerPhone").value;
+      const res = await fetch("/api/carer/register", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ carer_name, carer_phone })
+      });
+      const data = await res.json();
+      document.getElementById("carerMessage").innerText = JSON.stringify(data, null, 2);
+    }
+
+    async function createPayment() {
+      const amount = parseFloat(document.getElementById("paymentAmount").value);
+      const description = document.getElementById("paymentDesc").value;
+      const res = await fetch("/api/payments/create", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ amount, description })
+      });
+      const data = await res.json();
+      document.getElementById("paymentMessage").innerText = JSON.stringify(data, null, 2);
+    }
+
+    async function getCardInfo() {
+      try {
+        const res = await fetch("/api/issuing/card");
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        let balance = "N/A"; // Stripe issuing API does not provide balance; mock
+        document.getElementById("cardInfo").innerText =
+          `Card ID: ${data.card_id || data.card?.card_id || 'N/A'}\n` +
+          `Brand: ${data.brand || data.card?.brand || 'N/A'}\n` +
+          `Last4: ${data.last4 || data.card?.last4 || 'N/A'}\n` +
+          `Exp: ${data.exp_month || data.card?.exp_month || 'N/A'}/${data.exp_year || data.card?.exp_year || 'N/A'}\n` +
+          `Status: ${data.status || data.card?.status || 'N/A'}\n` +
+          `Weekly Limit: ${data.spending_controls?.spending_limits?.[0]?.amount / 100 || 'N/A'} €\n` +
+          `Balance (mock): ${balance}`;
+      } catch (err) {
+        document.getElementById("cardInfo").innerText = "Error fetching card info: " + err;
+      }
+    }
+
+    async function getTransactions() {
+      try {
+        const res = await fetch("/api/transactions");
+        if (!res.ok) throw new Error(await res.text());
+        const data = await res.json();
+        if (!data.transactions || !data.transactions.length) {
+          document.getElementById("transactions").innerText = "No transactions yet";
+          return;
+        }
+        const txList = data.transactions.map(tx =>
+          `${tx.date}: €${tx.amount} at ${tx.merchant || 'N/A'} (${tx.merchant_category || 'unknown'})`
+        ).join("\n");
+        document.getElementById("transactions").innerText = txList;
+      } catch (err) {
+        document.getElementById("transactions").innerText = "Error fetching transactions: " + err;
+      }
+    }
+
+    async function createCard() {
+      try {
+        const res = await fetch("/api/issuing/card/create", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" }
+        });
+        const data = await res.json();
+        document.getElementById("createCardMessage").innerText = JSON.stringify(data, null, 2);
+      } catch (err) {
+        document.getElementById("createCardMessage").innerText = "Error creating card: " + err;
+      }
+    }
+  </script>
+</body>
+</html>
