@@ -18,7 +18,7 @@ Built at HackEurope. Designed around accessibility: low-vision, screen reader, a
 - Voice commands for transfers, balance checks, and payments
 - Live transcription and natural text-to-speech via ElevenLabs
 - Stripe-backed payments: customer accounts, PaymentIntents, and Connect transfers to individual payees
-- Stripe Issuing virtual cards with weekly spending limits and blocked merchant categories (gambling, dating/escort services, tobacco), plus freeze/unfreeze and limit updates
+- Stripe Issuing virtual cards with weekly spending limits and blocked merchant categories (gambling, tobacco, etc.), plus freeze/unfreeze and limit updates
 - Fraud detection combining Stripe Radar risk scores with a custom scam-pattern check, tuned for scams that target elderly and disabled users
 - Carer registration: link a trusted contact by phone, with an SMS confirmation on registration
 - Carer dashboard: real-time SMS alerts on fraud risk, large payments, and failed payments; transaction monitoring; spending limits. Trusted people stay informed without controlling the account
